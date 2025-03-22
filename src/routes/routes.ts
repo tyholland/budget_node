@@ -1,15 +1,28 @@
 import { Express } from "express";
+import { createUser, deleteUser } from "../controllers/user";
+import {
+  createBudget,
+  deleteBudgetItem,
+  getBudget,
+  updateBudgetItem,
+} from "../controllers/budget";
 
 export const routes = (app: Express) => {
-  // Get
-  app.get("/budget", () => {});
+  // Create User
+  app.post("/user/create", createUser);
 
-  // Create
-  app.post("/create", () => {});
+  // Delete User
+  app.post("/user/delete", deleteUser);
 
-  // Update
-  app.put("/update", () => {});
+  // Get Budget
+  app.get("/budget/:user_id", getBudget);
 
-  // Delete
-  app.delete("/remove", () => {});
+  // Create Budget
+  app.post("/budget/create", createBudget);
+
+  // Update Budget Item
+  app.put("/budget/update", updateBudgetItem);
+
+  // Delete Budget Item
+  app.delete("/budget/remove", deleteBudgetItem);
 };
