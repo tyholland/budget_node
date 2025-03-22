@@ -16,7 +16,7 @@ app.use(
 );
 
 app.get("/", (req: Request, res: Response) => {
-  res.send("Express + TypeScript Server");
+  res.send("Eazy Budgeting API");
 });
 
 routes(app);
