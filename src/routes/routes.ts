@@ -12,10 +12,10 @@ export const routes = (app: Express) => {
   app.post("/user/create", createUser);
 
   // Delete User
-  app.post("/user/delete", deleteUser);
+  app.put("/user/remove", deleteUser);
 
   // Get Budget
-  app.get("/budget/:user_id", getBudget);
+  app.get("/budget", getBudget);
 
   // Create Budget
   app.post("/budget/create", createBudget);

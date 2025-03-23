@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { listOfMonths } from "../utils";
-import { client } from "../utils/postgres";
+import client from "../utils/postgres";
 import {
   Budget,
   BudgetDate,
@@ -10,11 +10,12 @@ import {
   User,
 } from "../utils/types";
 
-const getUserId = async (auth_id: string) => {
+const getUserId = async (auth_id: string | undefined) => {
   const user = await client.query<User>(
-    "SELECT * FROM users WHERE auth_id = ? AND active = ?",
+    "SELECT * FROM users WHERE auth_id = $1 AND active = $2",
     [auth_id, true],
   );
+
   return user.rows[0].id;
 };
 
@@ -24,10 +25,18 @@ export const createBudget = (req: Request, res: Response) => {
     const count = listOfMonths.length - 1;
     const date = new Date();
     const insertIds: number[] = [];
+    let user_id: number;
 
     try {
-      const user_id = await getUserId(auth_id);
+      user_id = await getUserId(auth_id);
+    } catch (err) {
+      return res.status(500).json({
+        err,
+        action: "Get user_id",
+      });
+    }
 
+    try {
       for (let i = 0; i <= count; i++) {
         const insertMonth = listOfMonths[i];
         const insertYear = date.getFullYear();
@@ -107,12 +116,21 @@ export const updateBudgetItem = (req: Request, res: Response) => {
 
 export const getBudget = (req: Request, res: Response) => {
   (async () => {
-    const auth_id = `auth0|${req.params.user_id}`;
+    const auth_id = req.auth?.payload.sub;
+    let user_id: number;
 
     try {
-      const user_id = await getUserId(auth_id);
+      user_id = await getUserId(auth_id);
+    } catch (err) {
+      return res.status(500).json({
+        err,
+        action: "Get user_id",
+      });
+    }
+
+    try {
       const budgetDate = await client.query<BudgetDate>(
-        "SELECT * FROM budget_date WHERE user_id = ?",
+        "SELECT * FROM budget_date WHERE user_id = $1",
         [user_id],
       );
       const fullBudget: BudgetResponse[] = [];
@@ -122,11 +140,11 @@ export const getBudget = (req: Request, res: Response) => {
       budgetDate.rows.forEach(async (item: BudgetDate) => {
         try {
           const budgetIncome = await client.query<Budget>(
-            "SELECT * FROM budget WHERE budget_date_id = ? AND type = ?",
+            "SELECT * FROM budget WHERE budget_date_id = $1 AND type = $2",
             [item.id, "income"],
           );
           const budgetExpense = await client.query<Budget>(
-            "SELECT * FROM budget WHERE budget_date_id = ? AND type = ?",
+            "SELECT * FROM budget WHERE budget_date_id = $1 AND type = $2",
             [item.id, "expense"],
           );
 

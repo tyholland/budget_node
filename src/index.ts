@@ -2,12 +2,15 @@ import express, { Express, Request, Response } from "express";
 import dotenv from "dotenv";
 import { routes } from "../src/routes/routes";
 import { auth } from "express-oauth2-jwt-bearer";
+import cors from "cors";
 
 dotenv.config();
 
 const app: Express = express();
-const port = process.env.PORT || 3001;
+const port = process.env.PORT;
 
+app.use(cors());
+app.use(express.json());
 app.use(
   auth({
     audience: process.env.AUDIENCE,

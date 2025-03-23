@@ -8,4 +8,8 @@ const clientFields: ClientConfig = {
   database: process.env.DB,
 };
 
-export const client = new Client(clientFields);
+const client = new Client(clientFields);
+
+client.connect();
+
+export default client;
