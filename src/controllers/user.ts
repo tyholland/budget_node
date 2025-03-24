@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import client from "../utils/postgres";
-import { User } from "../utils/types";
+import { Budget, User } from "../utils/types";
 
 const checkForExistingUser = async (auth_id: string | undefined) => {
   const user = await client.query<User>(
@@ -8,30 +8,43 @@ const checkForExistingUser = async (auth_id: string | undefined) => {
     [auth_id],
   );
 
-  return user.rowCount ? user.rowCount > 0 : false;
+  return {
+    exists: user.rowCount ? user.rowCount > 0 : false,
+    id: user.rows[0].id,
+  };
 };
 
 export const createUser = (req: Request, res: Response) => {
   (async () => {
-    console.log(req.body);
     const { email } = req.body;
     const auth_id = req.auth?.payload.sub;
     const insert =
       "INSERT into users(auth_id, email, active) VALUES ($1, $2, $3)";
     const values = [auth_id, email, true];
+    let user;
+    let budgetInfo;
+    let hasBudget: boolean;
 
     try {
-      const user = await checkForExistingUser(auth_id);
+      user = await checkForExistingUser(auth_id);
 
-      if (user) {
-        return res.status(204).json({
+      budgetInfo = await client.query<Budget>(
+        "SELECT * FROM budget WHERE user_id = $1",
+        [user.id],
+      );
+
+      hasBudget = budgetInfo.rowCount ? budgetInfo.rowCount > 0 : false;
+
+      if (user.exists) {
+        return res.status(206).json({
           action: "User already exists",
+          hasBudget,
         });
       }
     } catch (err) {
       return res.status(500).json({
         err,
-        action: "Get user_id",
+        action: "Get user_id and check for budget data",
       });
     }
 
@@ -40,6 +53,7 @@ export const createUser = (req: Request, res: Response) => {
 
       return res.status(200).json({
         success: true,
+        hasBudget,
       });
     } catch (err) {
       return res.status(500).json({
@@ -53,7 +67,7 @@ export const createUser = (req: Request, res: Response) => {
 export const deleteUser = (req: Request, res: Response) => {
   (async () => {
     const auth_id = req.auth?.payload.sub;
-    const update = "UPDATE users SET active = ? WHERE auth_id = ?";
+    const update = "UPDATE users SET active = $1 WHERE auth_id = $2";
     const values = [false, auth_id];
 
     // Add code to delete user from auth0

@@ -41,7 +41,7 @@ export const createBudget = (req: Request, res: Response) => {
         const insertMonth = listOfMonths[i];
         const insertYear = date.getFullYear();
         const insert =
-          "INSERT into budget_date(month, year, user_id) VALUES (?, ?, ?) RETURNING id";
+          "INSERT into budget_date(month, year, user_id) VALUES ($1, $2, $3) RETURNING id";
         const values = [insertMonth, insertYear, user_id];
 
         try {
@@ -51,7 +51,7 @@ export const createBudget = (req: Request, res: Response) => {
             const { type, label, amount, paid, month, year } = item;
             if (month === insertMonth && year === insertYear) {
               const insert =
-                "INSERT into budget(type, label, amount, paid, user_id, budget_date_id) VALUES (?, ?, ?, ?, ?, ?) RETURNING id";
+                "INSERT into budget(type, label, amount, paid, user_id, budget_date_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id";
               const values = [
                 type,
                 label,
@@ -96,7 +96,7 @@ export const updateBudgetItem = (req: Request, res: Response) => {
   (async () => {
     const { label, value, paid, budget_id } = req.body;
     const update =
-      "UPDATE budget SET label = ?, amount = ?, paid = ? WHERE id = ?";
+      "UPDATE budget SET label = $1, amount = $2, paid = $3 WHERE id = $4";
     const values = [label, value, paid, budget_id];
 
     try {
@@ -197,7 +197,7 @@ export const deleteBudgetItem = (req: Request, res: Response) => {
     const { budget_id } = req.body;
 
     try {
-      await client.query("DELETE FROM budget WHERE id = ?", [budget_id]);
+      await client.query("DELETE FROM budget WHERE id = $1", [budget_id]);
 
       return res.status(200).json({
         success: true,
