@@ -22,23 +22,19 @@ export const createUser = (req: Request, res: Response) => {
       "INSERT into users(auth_id, email, active) VALUES ($1, $2, $3)";
     const values = [auth_id, email, true];
     let user;
-    let budgetInfo;
-    let hasBudget: boolean;
 
     try {
       user = await checkForExistingUser(auth_id);
 
-      budgetInfo = await client.query<Budget>(
+      const budgetInfo = await client.query<Budget>(
         "SELECT * FROM budget WHERE user_id = $1",
         [user.id],
       );
 
-      hasBudget = budgetInfo.rowCount ? budgetInfo.rowCount > 0 : false;
-
       if (user.exists) {
         return res.status(206).json({
           action: "User already exists",
-          hasBudget,
+          hasBudget: budgetInfo.rowCount ? budgetInfo.rowCount > 0 : false,
         });
       }
     } catch (err) {
@@ -53,7 +49,7 @@ export const createUser = (req: Request, res: Response) => {
 
       return res.status(200).json({
         success: true,
-        hasBudget,
+        hasBudget: false,
       });
     } catch (err) {
       return res.status(500).json({
