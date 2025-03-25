@@ -10,7 +10,7 @@ const checkForExistingUser = async (auth_id: string | undefined) => {
 
   return {
     exists: user.rowCount ? user.rowCount > 0 : false,
-    id: user.rows[0].id,
+    id: user.rows.length > 0 ? user.rows[0].id : undefined,
   };
 };
 
@@ -26,12 +26,12 @@ export const createUser = (req: Request, res: Response) => {
     try {
       user = await checkForExistingUser(auth_id);
 
-      const budgetInfo = await client.query<Budget>(
-        "SELECT * FROM budget WHERE user_id = $1",
-        [user.id],
-      );
-
       if (user.exists) {
+        const budgetInfo = await client.query<Budget>(
+          "SELECT * FROM budget WHERE user_id = $1",
+          [user.id],
+        );
+
         return res.status(206).json({
           action: "User already exists",
           hasBudget: budgetInfo.rowCount ? budgetInfo.rowCount > 0 : false,

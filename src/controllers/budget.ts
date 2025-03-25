@@ -21,7 +21,8 @@ const getUserId = async (auth_id: string | undefined) => {
 
 export const createBudget = (req: Request, res: Response) => {
   (async () => {
-    const { budgetData, auth_id } = req.body;
+    const { budgetData } = req.body;
+    const auth_id = req.auth?.payload.sub;
     const count = listOfMonths.length - 1;
     const date = new Date();
     const insertIds: number[] = [];
@@ -32,63 +33,58 @@ export const createBudget = (req: Request, res: Response) => {
     } catch (err) {
       return res.status(500).json({
         err,
-        action: "Get user_id",
+        action: "Check if user_id is present",
       });
     }
 
-    try {
-      for (let i = 0; i <= count; i++) {
-        const insertMonth = listOfMonths[i];
-        const insertYear = date.getFullYear();
-        const insert =
-          "INSERT into budget_date(month, year, user_id) VALUES ($1, $2, $3) RETURNING id";
-        const values = [insertMonth, insertYear, user_id];
+    for (let i = 0; i <= count; i++) {
+      const insertMonth = listOfMonths[i];
+      const insertYear = date.getFullYear();
+      const insert =
+        "INSERT into budget_date(month, year, user_id) VALUES ($1, $2, $3) RETURNING id";
+      const values = [insertMonth, insertYear, user_id];
 
-        try {
-          const budgetDateId = await client.query(insert, values);
+      try {
+        const budgetDateId = await client.query(insert, values);
 
-          budgetData.forEach(async (item: BudgetParam) => {
-            const { type, label, amount, paid, month, year } = item;
-            if (month === insertMonth && year === insertYear) {
-              const insert =
-                "INSERT into budget(type, label, amount, paid, user_id, budget_date_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id";
-              const values = [
-                type,
-                label,
-                amount,
-                paid,
-                user_id,
-                budgetDateId.rows[0].id,
-              ];
+        for (let b = 0; b <= budgetData.length - 1; b++) {
+          const { type, label, amount, paid, month, year } = budgetData[
+            b
+          ] as BudgetParam;
+          if (month === insertMonth && year === insertYear) {
+            const insert =
+              "INSERT into budget(type, label, amount, paid, user_id, budget_date_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id";
+            const values = [
+              type,
+              label,
+              amount,
+              paid,
+              user_id,
+              budgetDateId.rows[0].id,
+            ];
 
-              try {
-                const budgetId = await client.query(insert, values);
-                insertIds.push(budgetId.rows[0].id);
-              } catch (err) {
-                return res.status(500).json({
-                  err,
-                  action: "Insert into budget table",
-                });
-              }
+            try {
+              const budgetId = await client.query(insert, values);
+              insertIds.push(budgetId.rows[0].id);
+            } catch (err) {
+              return res.status(500).json({
+                err,
+                action: "Insert into budget table",
+              });
             }
-          });
-        } catch (err) {
-          return res.status(500).json({
-            err,
-            action: "Insert into budget_date table",
-          });
+          }
         }
+      } catch (err) {
+        return res.status(500).json({
+          err,
+          action: "Insert into budget_date table",
+        });
       }
-
-      return res.status(200).json({
-        budget_ids: insertIds,
-      });
-    } catch (err) {
-      return res.status(500).json({
-        err,
-        action: "Get user_id from user table",
-      });
     }
+
+    return res.status(200).json({
+      budget_ids: insertIds,
+    });
   })();
 };
 
@@ -134,18 +130,20 @@ export const getBudget = (req: Request, res: Response) => {
         [user_id],
       );
       const fullBudget: BudgetResponse[] = [];
-      const income: BudgetItem[] = [];
-      const expense: BudgetItem[] = [];
 
-      budgetDate.rows.forEach(async (item: BudgetDate) => {
+      for (let i = 0; i <= budgetDate.rows.length - 1; i++) {
+        const { id, year, month } = budgetDate.rows[i];
+        const income: BudgetItem[] = [];
+        const expense: BudgetItem[] = [];
+
         try {
           const budgetIncome = await client.query<Budget>(
             "SELECT * FROM budget WHERE budget_date_id = $1 AND type = $2",
-            [item.id, "income"],
+            [id, "income"],
           );
           const budgetExpense = await client.query<Budget>(
             "SELECT * FROM budget WHERE budget_date_id = $1 AND type = $2",
-            [item.id, "expense"],
+            [id, "expense"],
           );
 
           budgetIncome.rows.forEach((response: Budget) => {
@@ -153,7 +151,7 @@ export const getBudget = (req: Request, res: Response) => {
               label: response.label,
               value: response.amount,
               paid: response.paid,
-              budget_id: item.id,
+              budget_id: response.id,
             });
           });
 
@@ -162,13 +160,13 @@ export const getBudget = (req: Request, res: Response) => {
               label: response.label,
               value: response.amount,
               paid: response.paid,
-              budget_id: item.id,
+              budget_id: response.id,
             });
           });
 
           fullBudget.push({
-            year: item.year,
-            month: item.month,
+            year: year,
+            month: month,
             income,
             expense,
           });
@@ -178,7 +176,7 @@ export const getBudget = (req: Request, res: Response) => {
             action: "Get budget info",
           });
         }
-      });
+      }
 
       return res.status(200).json({
         budget: fullBudget,
