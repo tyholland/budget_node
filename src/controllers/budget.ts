@@ -40,9 +40,10 @@ export const createBudget = (req: Request, res: Response) => {
     for (let i = 0; i <= count; i++) {
       const insertMonth = listOfMonths[i];
       const insertYear = date.getFullYear();
+      const currentDate = new Date(Date.now()).toISOString();
       const insert =
-        "INSERT into budget_date(month, year, user_id) VALUES ($1, $2, $3) RETURNING id";
-      const values = [insertMonth, insertYear, user_id];
+        "INSERT into budget_date(month, year, user_id, modified_at) VALUES ($1, $2, $3, $4) RETURNING id";
+      const values = [insertMonth, insertYear, user_id, currentDate];
 
       try {
         const budgetDateId = await client.query(insert, values);
@@ -53,7 +54,7 @@ export const createBudget = (req: Request, res: Response) => {
           ] as BudgetParam;
           if (month === insertMonth && year === insertYear) {
             const insert =
-              "INSERT into budget(type, label, amount, paid, user_id, budget_date_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id";
+              "INSERT into budget(type, label, amount, paid, user_id, budget_date_id, modified_at) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id";
             const values = [
               type,
               label,
@@ -61,6 +62,7 @@ export const createBudget = (req: Request, res: Response) => {
               paid,
               user_id,
               budgetDateId.rows[0].id,
+              currentDate,
             ];
 
             try {
@@ -91,9 +93,10 @@ export const createBudget = (req: Request, res: Response) => {
 export const updateBudgetItem = (req: Request, res: Response) => {
   (async () => {
     const { label, value, paid, budget_id } = req.body;
+    const currentDate = new Date(Date.now()).toISOString();
     const update =
-      "UPDATE budget SET label = $1, amount = $2, paid = $3 WHERE id = $4";
-    const values = [label, value, paid, budget_id];
+      "UPDATE budget SET label = $1, amount = $2, paid = $3, modified_at = $4 WHERE id = $5";
+    const values = [label, value, paid, currentDate, budget_id];
 
     try {
       await client.query(update, values);

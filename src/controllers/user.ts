@@ -18,9 +18,10 @@ export const createUser = (req: Request, res: Response) => {
   (async () => {
     const { email } = req.body;
     const auth_id = req.auth?.payload.sub;
+    const currentDate = new Date(Date.now()).toISOString();
     const insert =
-      "INSERT into users(auth_id, email, active) VALUES ($1, $2, $3)";
-    const values = [auth_id, email, true];
+      "INSERT into users(auth_id, email, active, modified_at) VALUES ($1, $2, $3, $4)";
+    const values = [auth_id, email, true, currentDate];
     let user;
 
     try {
@@ -63,8 +64,10 @@ export const createUser = (req: Request, res: Response) => {
 export const deleteUser = (req: Request, res: Response) => {
   (async () => {
     const auth_id = req.auth?.payload.sub;
-    const update = "UPDATE users SET active = $1 WHERE auth_id = $2";
-    const values = [false, auth_id];
+    const currentDate = new Date(Date.now()).toISOString();
+    const update =
+      "UPDATE users SET active = $1, modified_at = $2 WHERE auth_id = $3";
+    const values = [false, currentDate, auth_id];
 
     // Add code to delete user from auth0
 
