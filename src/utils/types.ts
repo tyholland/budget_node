@@ -34,6 +34,7 @@ export interface BudgetItem {
   label: string;
   value: number;
   budget_id: number;
+  budget_date_id: number;
   paid?: boolean;
 }
 
@@ -49,4 +50,9 @@ export interface User {
   id: number;
   auth_id: string;
   email: string;
+}
+
+export interface BudgetInsertIds {
+  budget_id: number;
+  budget_date_id: number;
 }

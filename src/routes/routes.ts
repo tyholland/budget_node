@@ -1,6 +1,7 @@
 import { Express } from "express";
 import { createUser, deleteUser } from "../controllers/user";
 import {
+  addBudgetItem,
   createBudget,
   deleteBudgetItem,
   getBudget,
@@ -22,6 +23,9 @@ export const routes = (app: Express) => {
 
   // Update Budget Item
   app.put("/budget/update", updateBudgetItem);
+
+  // Add Budget Item
+  app.post("/budget/add", addBudgetItem);
 
   // Delete Budget Item
   app.delete("/budget/remove", deleteBudgetItem);

@@ -4,6 +4,7 @@ import client from "../utils/postgres";
 import {
   Budget,
   BudgetDate,
+  BudgetInsertIds,
   BudgetItem,
   BudgetParam,
   BudgetResponse,
@@ -25,7 +26,7 @@ export const createBudget = (req: Request, res: Response) => {
     const auth_id = req.auth?.payload.sub;
     const count = listOfMonths.length - 1;
     const date = new Date();
-    const insertIds: number[] = [];
+    const insertIds: BudgetInsertIds[] = [];
     let user_id: number;
 
     try {
@@ -54,7 +55,7 @@ export const createBudget = (req: Request, res: Response) => {
           ] as BudgetParam;
           if (month === insertMonth && year === insertYear) {
             const insert =
-              "INSERT into budget(type, label, amount, paid, user_id, budget_date_id, modified_at) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id";
+              "INSERT into budget(type, label, amount, paid, user_id, budget_date_id, modified_at) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, budget_date_id";
             const values = [
               type,
               label,
@@ -66,8 +67,11 @@ export const createBudget = (req: Request, res: Response) => {
             ];
 
             try {
-              const budgetId = await client.query(insert, values);
-              insertIds.push(budgetId.rows[0].id);
+              const budgetInfo = await client.query(insert, values);
+              insertIds.push({
+                budget_id: budgetInfo.rows[0].id,
+                budget_date_id: budgetInfo.rows[0].budget_date_id,
+              });
             } catch (err) {
               return res.status(500).json({
                 err,
@@ -103,6 +107,49 @@ export const updateBudgetItem = (req: Request, res: Response) => {
 
       return res.status(200).json({
         success: true,
+      });
+    } catch (err) {
+      return res.status(500).json({
+        err,
+        action: "Update budget item",
+      });
+    }
+  })();
+};
+
+export const addBudgetItem = (req: Request, res: Response) => {
+  (async () => {
+    const { type, label, value, paid, budget_date_id } = req.body;
+    const auth_id = req.auth?.payload.sub;
+    const currentDate = new Date(Date.now()).toISOString();
+    let user_id: number;
+
+    try {
+      user_id = await getUserId(auth_id);
+    } catch (err) {
+      return res.status(500).json({
+        err,
+        action: "Check if user_id is present",
+      });
+    }
+
+    const insert =
+      "INSERT into budget(type, label, amount, paid, user_id, budget_date_id, modified_at) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id";
+    const values = [
+      type,
+      label,
+      value,
+      paid,
+      user_id,
+      budget_date_id,
+      currentDate,
+    ];
+
+    try {
+      const budgetId = await client.query(insert, values);
+
+      return res.status(200).json({
+        budget_id: budgetId.rows[0].id,
       });
     } catch (err) {
       return res.status(500).json({
@@ -155,6 +202,7 @@ export const getBudget = (req: Request, res: Response) => {
               value: response.amount,
               paid: response.paid,
               budget_id: response.id,
+              budget_date_id: response.budget_date_id,
             });
           });
 
@@ -164,6 +212,7 @@ export const getBudget = (req: Request, res: Response) => {
               value: response.amount,
               paid: response.paid,
               budget_id: response.id,
+              budget_date_id: response.budget_date_id,
             });
           });
 
