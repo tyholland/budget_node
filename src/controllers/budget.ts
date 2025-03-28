@@ -88,8 +88,6 @@ export const createBudget = (req: Request, res: Response) => {
       }
     }
 
-    await client.end();
-
     return res.status(200).json({
       budget_ids: insertIds,
     });
@@ -106,22 +104,14 @@ export const updateBudgetItem = (req: Request, res: Response) => {
 
     try {
       await client.query(update, values);
-    } catch (err) {
-      return res.status(500).json({
-        err,
-        action: "Update budget item",
-      });
-    }
 
-    try {
-      await client.end();
       return res.status(200).json({
         success: true,
       });
     } catch (err) {
       return res.status(500).json({
         err,
-        action: "Closing update budget item",
+        action: "Update budget item",
       });
     }
   })();
@@ -133,7 +123,6 @@ export const addBudgetItem = (req: Request, res: Response) => {
     const auth_id = req.auth?.payload.sub;
     const currentDate = new Date(Date.now()).toISOString();
     let user_id: number;
-    let budgetId;
 
     try {
       user_id = await getUserId(auth_id);
@@ -157,23 +146,15 @@ export const addBudgetItem = (req: Request, res: Response) => {
     ];
 
     try {
-      budgetId = await client.query(insert, values);
-    } catch (err) {
-      return res.status(500).json({
-        err,
-        action: "Add budget item",
-      });
-    }
+      const budgetId = await client.query(insert, values);
 
-    try {
-      await client.end();
       return res.status(200).json({
         budget_id: budgetId.rows[0].id,
       });
     } catch (err) {
       return res.status(500).json({
         err,
-        action: "Closing add budget item",
+        action: "Add budget item",
       });
     }
   })();
@@ -249,8 +230,6 @@ export const getBudget = (req: Request, res: Response) => {
         }
       }
 
-      await client.end();
-
       return res.status(200).json({
         budget: fullBudget,
       });
@@ -269,15 +248,6 @@ export const deleteBudgetItem = (req: Request, res: Response) => {
 
     try {
       await client.query("DELETE FROM budget WHERE id = $1", [budget_id]);
-    } catch (err) {
-      return res.status(500).json({
-        err,
-        action: "Delete budget item",
-      });
-    }
-
-    try {
-      await client.end();
 
       return res.status(200).json({
         success: true,
@@ -285,7 +255,7 @@ export const deleteBudgetItem = (req: Request, res: Response) => {
     } catch (err) {
       return res.status(500).json({
         err,
-        action: "Closing delete budget item",
+        action: "Delete budget item",
       });
     }
   })();

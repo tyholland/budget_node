@@ -48,15 +48,6 @@ export const createUser = (req: Request, res: Response) => {
 
     try {
       await client.query<User>(insert, values);
-    } catch (err) {
-      return res.status(500).json({
-        err,
-        action: "Create user",
-      });
-    }
-
-    try {
-      await client.end();
 
       return res.status(200).json({
         success: true,
@@ -65,7 +56,7 @@ export const createUser = (req: Request, res: Response) => {
     } catch (err) {
       return res.status(500).json({
         err,
-        action: "Closing create user",
+        action: "Create user",
       });
     }
   })();
@@ -80,29 +71,25 @@ export const deleteUser = (req: Request, res: Response) => {
     const values = [false, currentDate, auth_id];
 
     try {
-      await client.query(update, values);
-    } catch (err) {
-      return res.status(500).json({
-        err,
-        action: "Delete user",
-      });
-    }
-
-    try {
       const management = new ManagementClient({
-        token: process.env.AUTH0_TOKEN as string,
-        domain: process.env.AUTH0_DOMAIN as string,
+        clientId: `${process.env.AUTH0_CLIENT_ID}`,
+        clientSecret: `${process.env.AUTH0_CLIENT_SECRET}`,
+        domain: `${process.env.AUTH0_DOMAIN}`,
+        audience: process.env.AUTH0_AUDIENCE,
       });
 
       await management.users.delete({
-        id: auth_id as string,
+        id: `${auth_id}`,
       });
-    } catch {
-      console.error("Failed to delete auth0 user");
+    } catch (err) {
+      return res.status(500).json({
+        err,
+        action: "Failed to delete auth0 user",
+      });
     }
 
     try {
-      await client.end();
+      await client.query(update, values);
 
       return res.status(200).json({
         success: true,
@@ -110,7 +97,7 @@ export const deleteUser = (req: Request, res: Response) => {
     } catch (err) {
       return res.status(500).json({
         err,
-        action: "Closing delete user",
+        action: "Delete user",
       });
     }
   })();
