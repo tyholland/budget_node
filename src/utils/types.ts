@@ -9,6 +9,7 @@ export interface Budget {
   user_id: number;
   budget_date_id: number;
   id: number;
+  frequency: string;
 }
 
 // Values we get from FE when creating a budget
@@ -19,6 +20,7 @@ export interface BudgetParam {
   label: string;
   amount: number;
   paid: boolean;
+  frequency: string;
   budget_id?: number;
 }
 
@@ -36,6 +38,7 @@ export interface BudgetItem {
   budget_id: number;
   budget_date_id: number;
   paid?: boolean;
+  frequency?: string;
 }
 
 // What we see back to the FE for a budget

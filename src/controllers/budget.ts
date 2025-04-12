@@ -58,12 +58,11 @@ export const createBudget = (req: Request, res: Response) => {
         const budgetDateId = await client.query(insert, values);
 
         for (let b = 0; b <= budgetData.length - 1; b++) {
-          const { type, label, amount, paid, month, year } = budgetData[
-            b
-          ] as BudgetParam;
+          const { type, label, amount, paid, month, year, frequency } =
+            budgetData[b] as BudgetParam;
           if (month === insertMonth && year === insertYear) {
             const insert =
-              "INSERT into budget(type, label, amount, paid, user_id, budget_date_id, modified_at) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, budget_date_id";
+              "INSERT into budget(type, label, amount, paid, user_id, budget_date_id, modified_at, frequency) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, budget_date_id";
             const values = [
               type,
               label,
@@ -72,6 +71,7 @@ export const createBudget = (req: Request, res: Response) => {
               user_id,
               budgetDateId.rows[0].id,
               currentDate,
+              frequency,
             ];
 
             try {
@@ -104,11 +104,11 @@ export const createBudget = (req: Request, res: Response) => {
 
 export const updateBudgetItem = (req: Request, res: Response) => {
   (async () => {
-    const { label, value, paid, budget_id } = req.body;
+    const { label, value, paid, budget_id, frequency } = req.body;
     const currentDate = new Date(Date.now()).toISOString();
     const update =
-      "UPDATE budget SET label = $1, amount = $2, paid = $3, modified_at = $4 WHERE id = $5";
-    const values = [label, value, paid, currentDate, budget_id];
+      "UPDATE budget SET label = $1, amount = $2, paid = $3, modified_at = $4, frequency = $5 WHERE id = $6";
+    const values = [label, value, paid, currentDate, frequency, budget_id];
 
     try {
       await client.query(update, values);
@@ -127,7 +127,7 @@ export const updateBudgetItem = (req: Request, res: Response) => {
 
 export const addBudgetItem = (req: Request, res: Response) => {
   (async () => {
-    const { type, label, value, paid, budget_date_id } = req.body;
+    const { type, label, value, paid, budget_date_id, frequency } = req.body;
     const auth_id = req.auth?.payload.sub;
     const currentDate = new Date(Date.now()).toISOString();
     let user_id: number;
@@ -142,7 +142,7 @@ export const addBudgetItem = (req: Request, res: Response) => {
     }
 
     const insert =
-      "INSERT into budget(type, label, amount, paid, user_id, budget_date_id, modified_at) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id";
+      "INSERT into budget(type, label, amount, paid, user_id, budget_date_id, modified_at, frequency) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id";
     const values = [
       type,
       label,
@@ -151,6 +151,7 @@ export const addBudgetItem = (req: Request, res: Response) => {
       user_id,
       budget_date_id,
       currentDate,
+      frequency,
     ];
 
     try {
@@ -219,6 +220,7 @@ export const getBudget = (req: Request, res: Response) => {
               label: response.label,
               value: Number(response.amount),
               paid: response.paid,
+              frequency: response.frequency,
               budget_id: response.id,
               budget_date_id: response.budget_date_id,
             });
