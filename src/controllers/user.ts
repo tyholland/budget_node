@@ -2,20 +2,7 @@ import { Request, Response } from "express";
 import client from "../utils/postgres";
 import { Budget, User } from "../utils/types";
 import { ManagementClient } from "auth0";
-
-const checkForExistingUser = async (auth_id: string | undefined) => {
-  const user = await client.query<User>(
-    "SELECT * FROM users WHERE auth_id = $1",
-    [auth_id],
-  );
-
-  return {
-    exists: user.rowCount ? user.rowCount > 0 : false,
-    id: user.rows.length > 0 ? user.rows[0].id : undefined,
-    subscription_id:
-      user.rows.length > 0 ? user.rows[0].subscription_id : undefined,
-  };
-};
+import { checkForExistingUser } from "../utils/functions";
 
 export const createUser = (req: Request, res: Response) => {
   (async () => {
@@ -28,7 +15,7 @@ export const createUser = (req: Request, res: Response) => {
     let user;
 
     try {
-      user = await checkForExistingUser(auth_id);
+      user = await checkForExistingUser(auth_id, client);
 
       if (user.exists) {
         const budgetInfo = await client.query<Budget>(

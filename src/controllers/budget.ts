@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { listOfMonths } from "../utils";
+import { listOfMonths } from "../utils/constants";
 import client from "../utils/postgres";
 import {
   Budget,
@@ -8,25 +8,8 @@ import {
   BudgetItem,
   BudgetParam,
   BudgetResponse,
-  User,
 } from "../utils/types";
-
-const getUserId = async (auth_id: string | undefined) => {
-  const user = await client.query<User>(
-    "SELECT * FROM users WHERE auth_id = $1 AND active = $2",
-    [auth_id, true],
-  );
-
-  return user.rows[0].id;
-};
-
-const sortBudget = (a: BudgetItem, b: BudgetItem) => {
-  return a.label.toLowerCase() > b.label.toLowerCase()
-    ? 1
-    : a.label.toLowerCase() < b.label.toLowerCase()
-      ? -1
-      : 0;
-};
+import { getUserId, sortBudget } from "../utils/functions";
 
 export const createBudget = (req: Request, res: Response) => {
   (async () => {
@@ -38,7 +21,7 @@ export const createBudget = (req: Request, res: Response) => {
     let user_id: number;
 
     try {
-      user_id = await getUserId(auth_id);
+      user_id = await getUserId(auth_id, client);
     } catch (err) {
       return res.status(500).json({
         err,
@@ -133,7 +116,7 @@ export const addBudgetItem = (req: Request, res: Response) => {
     let user_id: number;
 
     try {
-      user_id = await getUserId(auth_id);
+      user_id = await getUserId(auth_id, client);
     } catch (err) {
       return res.status(500).json({
         err,
@@ -175,7 +158,7 @@ export const getBudget = (req: Request, res: Response) => {
     let user_id: number;
 
     try {
-      user_id = await getUserId(auth_id);
+      user_id = await getUserId(auth_id, client);
     } catch (err) {
       return res.status(500).json({
         err,
