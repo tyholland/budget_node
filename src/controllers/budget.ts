@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { listOfMonths } from "../utils/constants";
 import client from "../utils/postgres";
 import {
+  AddedBudgetItem,
   Budget,
   BudgetDate,
   BudgetInsertIds,
@@ -9,7 +10,12 @@ import {
   BudgetParam,
   BudgetResponse,
 } from "../utils/types";
-import { getUserId, sortBudget } from "../utils/functions";
+import {
+  getUserId,
+  updateBasedOnCadence,
+  sortBudget,
+  insertBasedOnCadence,
+} from "../utils/functions";
 
 export const createBudget = (req: Request, res: Response) => {
   (async () => {
@@ -41,8 +47,15 @@ export const createBudget = (req: Request, res: Response) => {
         const budgetDateId = await client.query(insert, values);
 
         for (let b = 0; b <= budgetData.length - 1; b++) {
-          const { type, label, amount, paid, month, year, frequency } =
-            budgetData[b] as BudgetParam;
+          const {
+            type,
+            label,
+            amount,
+            paid,
+            month,
+            year,
+            frequency,
+          }: BudgetParam = budgetData[b];
           if (month === insertMonth && year === insertYear) {
             const insert =
               "INSERT into budget(type, label, amount, paid, user_id, budget_date_id, modified_at, frequency) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, budget_date_id";
@@ -87,14 +100,41 @@ export const createBudget = (req: Request, res: Response) => {
 
 export const updateBudgetItem = (req: Request, res: Response) => {
   (async () => {
-    const { label, value, paid, budget_id, frequency } = req.body;
-    const currentDate = new Date(Date.now()).toISOString();
+    const responseBody: BudgetItem = req.body;
     const update =
       "UPDATE budget SET label = $1, amount = $2, paid = $3, modified_at = $4, frequency = $5 WHERE id = $6";
-    const values = [label, value, paid, currentDate, frequency, budget_id];
+    let budgetInfo;
+    let budgetData;
 
+    // Get the type and label of the specific budget
     try {
-      await client.query(update, values);
+      budgetInfo = await client.query(
+        "SELECT type, label FROM budget WHERE id = $1",
+        [responseBody.budget_id],
+      );
+    } catch (err) {
+      return res.status(500).json({
+        err,
+        action: "Check if budget exists",
+      });
+    }
+
+    // Get all the budgets that match the type and label
+    try {
+      budgetData = await client.query<Budget>(
+        "SELECT * FROM budget WHERE type = $1 AND label = $2 ORDER BY budget_date_id ASC",
+        [budgetInfo.rows[0].type, budgetInfo.rows[0].label],
+      );
+    } catch (err) {
+      return res.status(500).json({
+        err,
+        action: "Check all budgets that meet a certain criteria",
+      });
+    }
+
+    // Update budget data
+    try {
+      await updateBasedOnCadence(client, responseBody, budgetData, update);
 
       return res.status(200).json({
         success: true,
@@ -110,9 +150,8 @@ export const updateBudgetItem = (req: Request, res: Response) => {
 
 export const addBudgetItem = (req: Request, res: Response) => {
   (async () => {
-    const { type, label, value, paid, budget_date_id, frequency } = req.body;
+    const responseBody: AddedBudgetItem = req.body;
     const auth_id = req.auth?.payload.sub;
-    const currentDate = new Date(Date.now()).toISOString();
     let user_id: number;
 
     try {
@@ -126,22 +165,17 @@ export const addBudgetItem = (req: Request, res: Response) => {
 
     const insert =
       "INSERT into budget(type, label, amount, paid, user_id, budget_date_id, modified_at, frequency) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id";
-    const values = [
-      type,
-      label,
-      value,
-      paid,
-      user_id,
-      budget_date_id,
-      currentDate,
-      frequency,
-    ];
 
     try {
-      const budgetId = await client.query(insert, values);
+      const budgetIds = await insertBasedOnCadence(
+        client,
+        responseBody,
+        insert,
+        user_id,
+      );
 
       return res.status(200).json({
-        budget_id: budgetId.rows[0].id,
+        budget_id: budgetIds,
       });
     } catch (err) {
       return res.status(500).json({

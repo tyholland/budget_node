@@ -24,6 +24,17 @@ export interface BudgetParam {
   budget_id?: number;
 }
 
+// Values we get from FE when adding a new budget
+export interface AddedBudgetItem {
+  type: string;
+  label: string;
+  paid: boolean;
+  frequency: string;
+  value: number;
+  budget_date_id: number;
+  cadence: string;
+}
+
 // Structure for the budget_date table
 export interface BudgetDate {
   month: string;
@@ -39,6 +50,7 @@ export interface BudgetItem {
   budget_date_id: number;
   paid?: boolean;
   frequency?: string;
+  cadence?: string;
 }
 
 // What we see back to the FE for a budget
