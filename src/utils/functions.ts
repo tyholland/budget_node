@@ -39,39 +39,19 @@ export const checkForExistingUser = async (
   };
 };
 
-const getFrequencyValue = (value: number, frequency?: string) => {
-  if (!frequency) {
-    return value;
-  }
-
-  switch (frequency) {
-    case "Daily":
-      return value * 30; // npm package to get business days in month
-    case "Weekly":
-      return value * 4;
-    case "Bi-Weekly":
-      return value * 2;
-    case "Monthly":
-      return value;
-    default:
-      return value;
-  }
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const updateBasedOnCadence = async (
   client: Client,
   responseBody: BudgetItem,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   budgetData: QueryResult<any>,
   queryString: string,
 ) => {
   const { label, value, paid, budget_id, budget_date_id, frequency, cadence } =
     responseBody;
   const currentDate = new Date(Date.now()).toISOString();
-  const freqValue = getFrequencyValue(value, frequency);
 
   if (cadence === "Current Month") {
-    const values = [label, freqValue, paid, currentDate, frequency, budget_id];
+    const values = [label, value, paid, currentDate, frequency, budget_id];
 
     await client.query(queryString, values);
   }
@@ -81,7 +61,7 @@ export const updateBasedOnCadence = async (
 
     try {
       const selectedMonth = await client.query(
-        "SELECT month FROM budget_date WHERE id = ?",
+        "SELECT month FROM budget_date WHERE id = $1",
         [budget_date_id],
       );
       startingMonth = listOfMonths.indexOf(selectedMonth.rows[0].month);
@@ -93,7 +73,7 @@ export const updateBasedOnCadence = async (
     for (let i = startingMonth; i <= 11; i++) {
       const values = [
         label,
-        freqValue,
+        value,
         paid,
         currentDate,
         frequency,
@@ -109,7 +89,7 @@ export const updateBasedOnCadence = async (
       for (let i = 0; i <= 11; i++) {
         const values = [
           label,
-          freqValue,
+          value,
           paid,
           currentDate,
           frequency,
@@ -125,7 +105,7 @@ export const updateBasedOnCadence = async (
     for (let i = 0; i <= 11; i++) {
       const values = [
         label,
-        freqValue,
+        value,
         paid,
         currentDate,
         frequency,
@@ -146,11 +126,10 @@ export const insertBasedOnCadence = async (
   const { type, label, value, paid, budget_date_id, frequency, cadence } =
     responseBody;
   const currentDate = new Date(Date.now()).toISOString();
-  const freqValue = getFrequencyValue(value, frequency);
   const values = [
     type,
     label,
-    freqValue,
+    value,
     paid,
     user_id,
     budget_date_id,
@@ -164,7 +143,7 @@ export const insertBasedOnCadence = async (
 
     try {
       const selectedMonth = await client.query(
-        "SELECT month FROM budget_date WHERE id = ?",
+        "SELECT month FROM budget_date WHERE id = $1",
         [budget_date_id],
       );
       startingMonth = listOfMonths.indexOf(selectedMonth.rows[0].month);
