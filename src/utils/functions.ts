@@ -50,12 +50,6 @@ export const updateBasedOnCadence = async (
     responseBody;
   const currentDate = new Date(Date.now()).toISOString();
 
-  if (cadence === "Current Month") {
-    const values = [label, value, paid, currentDate, frequency, budget_id];
-
-    await client.query(queryString, values);
-  }
-
   if (cadence === "Future Months") {
     let startingMonth: number;
 
@@ -115,6 +109,9 @@ export const updateBasedOnCadence = async (
       await client.query(queryString, values);
     }
   }
+
+  const values = [label, value, paid, currentDate, frequency, budget_id];
+  await client.query(queryString, values);
 };
 
 export const insertBasedOnCadence = async (
@@ -126,16 +123,6 @@ export const insertBasedOnCadence = async (
   const { type, label, value, paid, budget_date_id, frequency, cadence } =
     responseBody;
   const currentDate = new Date(Date.now()).toISOString();
-  const values = [
-    type,
-    label,
-    value,
-    paid,
-    user_id,
-    budget_date_id,
-    currentDate,
-    frequency,
-  ];
 
   if (cadence === "Future Months") {
     let startingMonth: number;
@@ -153,6 +140,16 @@ export const insertBasedOnCadence = async (
     }
 
     for (let i = startingMonth; i <= 11; i++) {
+      const values = [
+        type,
+        label,
+        value,
+        paid,
+        user_id,
+        i + 1,
+        currentDate,
+        frequency,
+      ];
       const budgetId = await client.query(queryString, values);
       budgetArray.push(budgetId.rows[0].id);
     }
@@ -166,6 +163,16 @@ export const insertBasedOnCadence = async (
     if (frequency === "Quarterly") {
       for (let i = 0; i <= 11; i++) {
         if (i === 2 || i === 5 || i === 8 || i === 11) {
+          const values = [
+            type,
+            label,
+            value,
+            paid,
+            user_id,
+            i + 1,
+            currentDate,
+            frequency,
+          ];
           const budgetId = await client.query(queryString, values);
           budgetArray.push(budgetId.rows[0].id);
         }
@@ -175,6 +182,16 @@ export const insertBasedOnCadence = async (
     }
 
     for (let i = 0; i <= 11; i++) {
+      const values = [
+        type,
+        label,
+        value,
+        paid,
+        user_id,
+        i + 1,
+        currentDate,
+        frequency,
+      ];
       const budgetId = await client.query(queryString, values);
       budgetArray.push(budgetId.rows[0].id);
     }
@@ -182,6 +199,16 @@ export const insertBasedOnCadence = async (
     return budgetArray;
   }
 
+  const values = [
+    type,
+    label,
+    value,
+    paid,
+    user_id,
+    budget_date_id,
+    currentDate,
+    frequency,
+  ];
   const budgetId = await client.query(queryString, values);
   return budgetId.rows[0].id;
 };
