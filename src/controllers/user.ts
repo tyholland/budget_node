@@ -2,7 +2,12 @@ import { Request, Response } from "express";
 import client from "../utils/postgres";
 import { Budget, User } from "../utils/types";
 import { ManagementClient } from "auth0";
-import { checkForExistingUser } from "../utils/functions";
+import {
+  checkConnectAccountExists,
+  checkForExistingUser,
+  getUserByEmail,
+  getUserId,
+} from "../utils/functions";
 
 export const createUser = (req: Request, res: Response) => {
   (async () => {
@@ -13,6 +18,7 @@ export const createUser = (req: Request, res: Response) => {
       "INSERT into users(auth_id, email, active, modified_at, subscription_id) VALUES ($1, $2, $3, $4, $5)";
     const values = [auth_id, email, true, currentDate, 2];
     let user;
+    let connectedAccount;
 
     try {
       user = await checkForExistingUser(auth_id, client);
@@ -23,10 +29,17 @@ export const createUser = (req: Request, res: Response) => {
           [user.id],
         );
 
+        try {
+          connectedAccount = await checkConnectAccountExists(user.id, client);
+        } catch (err) {
+          console.error(err, "Failed to get Connected Account info");
+        }
+
         return res.status(206).json({
           action: "User already exists",
           hasBudget: budgetInfo.rowCount ? budgetInfo.rowCount > 0 : false,
           subscription_id: user.subscription_id,
+          connected_message: connectedAccount?.exists,
         });
       }
     } catch (err) {
@@ -43,6 +56,7 @@ export const createUser = (req: Request, res: Response) => {
         success: true,
         hasBudget: false,
         subscription_id: 2,
+        connected_message: false,
       });
     } catch (err) {
       return res.status(500).json({
@@ -89,6 +103,57 @@ export const deleteUser = (req: Request, res: Response) => {
       return res.status(500).json({
         err,
         action: "Delete user",
+      });
+    }
+  })();
+};
+
+export const shareAccount = (req: Request, res: Response) => {
+  (async () => {
+    const { email } = req.body;
+    const auth_id = req.auth?.payload.sub;
+    const currentDate = new Date(Date.now()).toISOString();
+    let allowed_user;
+    let user_id;
+
+    try {
+      user_id = await getUserId(auth_id, client);
+    } catch (err) {
+      return res.status(500).json({
+        err,
+        action: "Get user_id",
+      });
+    }
+
+    try {
+      allowed_user = await getUserByEmail(email as string, client);
+
+      if (!allowed_user.exists) {
+        return res.status(500).json({
+          action: "User doesn't exist",
+        });
+      }
+    } catch (err) {
+      return res.status(500).json({
+        err,
+        action: "Get user info from email",
+      });
+    }
+
+    const insert =
+      "INSERT into connected_accounts(main_account, allowed_account, modified_at) VALUES ($1, $2, $3)";
+    const values = [user_id, allowed_user.id, currentDate];
+
+    try {
+      await client.query(insert, values);
+
+      return res.status(200).json({
+        success: true,
+      });
+    } catch (err) {
+      return res.status(500).json({
+        err,
+        action: "Insert values for an connected account",
       });
     }
   })();

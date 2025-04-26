@@ -66,9 +66,17 @@ export interface User {
   auth_id: string;
   email: string;
   subscription_id: number;
+  active: boolean;
 }
 
 export interface BudgetInsertIds {
   budget_id: number;
   budget_date_id: number;
+}
+
+export interface ConnectedAccount {
+  id: number;
+  main_account: number;
+  allowed_account: number;
+  is_connected: boolean;
 }

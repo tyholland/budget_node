@@ -15,6 +15,9 @@ export const routes = (app: Express) => {
   // Delete User
   app.put("/user/remove", deleteUser);
 
+  // share account
+  app.post("/user/share", addBudgetItem);
+
   // Get Budget
   app.get("/budget", getBudget);
 

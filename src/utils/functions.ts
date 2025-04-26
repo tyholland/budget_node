@@ -1,5 +1,5 @@
 import { Client, QueryResult } from "pg";
-import { AddedBudgetItem, BudgetItem, User } from "./types";
+import { AddedBudgetItem, BudgetItem, ConnectedAccount, User } from "./types";
 import { listOfMonths } from "./constants";
 
 export const sortBudget = (a: BudgetItem, b: BudgetItem) => {
@@ -8,6 +8,38 @@ export const sortBudget = (a: BudgetItem, b: BudgetItem) => {
     : a.label.toLowerCase() < b.label.toLowerCase()
       ? -1
       : 0;
+};
+
+export const getConnectAccountUser = async (
+  user_id: number,
+  client: Client,
+) => {
+  const connected_user = await client.query<ConnectedAccount>(
+    "SELECT * FROM connected_accounts WHERE allowed_account = $1 AND is_connected = $2",
+    [user_id, true],
+  );
+
+  return {
+    exists: connected_user.rowCount ? connected_user.rowCount > 0 : false,
+    id:
+      connected_user.rows.length > 0
+        ? connected_user.rows[0].main_account
+        : undefined,
+  };
+};
+
+export const checkConnectAccountExists = async (
+  user_id: number | undefined,
+  client: Client,
+) => {
+  const connected_user = await client.query<ConnectedAccount>(
+    "SELECT * FROM connected_accounts WHERE allowed_account = $1 AND is_connected = $2",
+    [user_id, null],
+  );
+
+  return {
+    exists: connected_user.rowCount ? connected_user.rowCount > 0 : false,
+  };
 };
 
 export const getUserId = async (
@@ -19,7 +51,13 @@ export const getUserId = async (
     [auth_id, true],
   );
 
-  return user.rows[0].id;
+  const connected_user = await getConnectAccountUser(user.rows[0].id, client);
+
+  return connected_user.exists
+    ? connected_user.id
+    : user.rows.length > 0
+      ? user.rows[0].id
+      : undefined;
 };
 
 export const checkForExistingUser = async (
@@ -211,4 +249,16 @@ export const insertBasedOnCadence = async (
   ];
   const budgetId = await client.query(queryString, values);
   return budgetId.rows[0].id;
+};
+
+export const getUserByEmail = async (email: string, client: Client) => {
+  const user = await client.query<User>(
+    "SELECT * FROM users WHERE email = $1 and active = $2",
+    [email, true],
+  );
+
+  return {
+    exists: user.rowCount ? user.rowCount > 0 : false,
+    id: user.rows.length > 0 ? user.rows[0].id : undefined,
+  };
 };

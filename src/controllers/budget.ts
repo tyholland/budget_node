@@ -24,10 +24,16 @@ export const createBudget = (req: Request, res: Response) => {
     const count = listOfMonths.length - 1;
     const date = new Date();
     const insertIds: BudgetInsertIds[] = [];
-    let user_id: number;
+    let user_id: number | undefined;
 
     try {
       user_id = await getUserId(auth_id, client);
+
+      if (!user_id) {
+        return res.status(500).json({
+          action: "User doesn't exist",
+        });
+      }
     } catch (err) {
       return res.status(500).json({
         err,
@@ -152,10 +158,16 @@ export const addBudgetItem = (req: Request, res: Response) => {
   (async () => {
     const responseBody: AddedBudgetItem = req.body;
     const auth_id = req.auth?.payload.sub;
-    let user_id: number;
+    let user_id: number | undefined;
 
     try {
       user_id = await getUserId(auth_id, client);
+
+      if (!user_id) {
+        return res.status(500).json({
+          action: "User doesn't exist",
+        });
+      }
     } catch (err) {
       return res.status(500).json({
         err,
@@ -189,10 +201,16 @@ export const addBudgetItem = (req: Request, res: Response) => {
 export const getBudget = (req: Request, res: Response) => {
   (async () => {
     const auth_id = req.auth?.payload.sub;
-    let user_id: number;
+    let user_id: number | undefined;
 
     try {
       user_id = await getUserId(auth_id, client);
+
+      if (!user_id) {
+        return res.status(500).json({
+          action: "User doesn't exist",
+        });
+      }
     } catch (err) {
       return res.status(500).json({
         err,
