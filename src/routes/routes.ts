@@ -1,5 +1,10 @@
 import { Express } from "express";
-import { createUser, deleteUser } from "../controllers/user";
+import {
+  connectedAccountDecision,
+  createUser,
+  deleteUser,
+  shareAccount,
+} from "../controllers/user";
 import {
   addBudgetItem,
   createBudget,
@@ -16,7 +21,10 @@ export const routes = (app: Express) => {
   app.put("/user/remove", deleteUser);
 
   // share account
-  app.post("/user/share", addBudgetItem);
+  app.post("/user/share", shareAccount);
+
+  // decide to share account
+  app.post("/user/share/decide", connectedAccountDecision);
 
   // Get Budget
   app.get("/budget", getBudget);

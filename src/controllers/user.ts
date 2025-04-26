@@ -40,6 +40,8 @@ export const createUser = (req: Request, res: Response) => {
           hasBudget: budgetInfo.rowCount ? budgetInfo.rowCount > 0 : false,
           subscription_id: user.subscription_id,
           connected_message: connectedAccount?.exists,
+          connected_id: connectedAccount?.id,
+          primary_request: connectedAccount?.main_account,
         });
       }
     } catch (err) {
@@ -154,6 +156,29 @@ export const shareAccount = (req: Request, res: Response) => {
       return res.status(500).json({
         err,
         action: "Insert values for an connected account",
+      });
+    }
+  })();
+};
+
+export const connectedAccountDecision = (req: Request, res: Response) => {
+  (async () => {
+    const { decision, connected_id } = req.body;
+    const currentDate = new Date(Date.now()).toISOString();
+    const update =
+      "UPDATE connected_accounts SET is_connected = $1, modified_at = $2 WHERE id = $3";
+    const values = [decision, currentDate, connected_id];
+
+    try {
+      await client.query(update, values);
+
+      return res.status(200).json({
+        success: true,
+      });
+    } catch (err) {
+      return res.status(500).json({
+        err,
+        action: "Update values for an connected account",
       });
     }
   })();

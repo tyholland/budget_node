@@ -37,8 +37,14 @@ export const checkConnectAccountExists = async (
     [user_id, null],
   );
 
+  const user = await client.query<User>("SELECT * FROM users WHERE id = $1", [
+    connected_user.rows[0].main_account,
+  ]);
+
   return {
     exists: connected_user.rowCount ? connected_user.rowCount > 0 : false,
+    id: connected_user.rows.length > 0 ? connected_user.rows[0].id : undefined,
+    main_account: user.rows.length > 0 ? user.rows[0].email : undefined,
   };
 };
 
