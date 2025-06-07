@@ -70,6 +70,7 @@ export const createUser = (req: Request, res: Response) => {
         hasBudget: false,
         subscription_id: 2,
         connected_message: false,
+        is_connected: false,
       });
     } catch (err) {
       return res.status(500).json({
