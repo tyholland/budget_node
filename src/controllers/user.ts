@@ -52,6 +52,7 @@ export const createUser = (req: Request, res: Response) => {
           connected_message: connectedAccount?.exists,
           connected_id: connectedAccount?.id,
           primary_request: connectedAccount?.main_account,
+          is_connected: connectedAccount?.is_connected,
         });
       }
     } catch (err) {
