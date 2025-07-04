@@ -33,6 +33,7 @@ export const checkConnectAccountExists = async (
   client: Client,
 ) => {
   let user: QueryResult<User> | undefined = undefined;
+  let second_user: QueryResult<User> | undefined = undefined;
   let active_connected_user: QueryResult<ConnectedAccount> | undefined =
     undefined;
 
@@ -60,6 +61,11 @@ export const checkConnectAccountExists = async (
     user = await client.query<User>("SELECT * FROM users WHERE id = $1", [
       active_connected_user.rows[0].main_account,
     ]);
+
+    second_user = await client.query<User>(
+      "SELECT * FROM users WHERE id = $1",
+      [active_connected_user.rows[0].allowed_account],
+    );
   }
 
   return {
@@ -71,6 +77,9 @@ export const checkConnectAccountExists = async (
         ? non_active_connected_user.rows[0].id
         : undefined,
     main_account: user?.rowCount ? user.rows[0].email : undefined,
+    second_account: second_user?.rowCount
+      ? second_user.rows[0].email
+      : undefined,
     user_id: user?.rowCount ? user.rows[0].id : undefined,
     is_connected: active_connected_user?.rowCount
       ? active_connected_user.rowCount > 0

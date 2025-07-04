@@ -3,6 +3,7 @@ import {
   connectedAccountDecision,
   createUser,
   deleteUser,
+  removeSharedAccount,
   shareAccount,
 } from "../controllers/user";
 import {
@@ -25,6 +26,9 @@ export const routes = (app: Express) => {
 
   // decide to share account
   app.post("/user/share/decide", connectedAccountDecision);
+
+  // remove share account access
+  app.put("/user/share/remove", removeSharedAccount);
 
   // Get Budget
   app.get("/budget", getBudget);
