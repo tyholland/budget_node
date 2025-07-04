@@ -294,7 +294,23 @@ export const getBudget = (req: Request, res: Response) => {
 export const deleteBudgetItem = (req: Request, res: Response) => {
   (async () => {
     const client = instance();
+    const auth_id = req.auth?.payload.sub;
     const { budget_id } = req.body;
+
+    try {
+      const user_id = await getUserId(auth_id, client);
+
+      if (!user_id) {
+        return res.status(500).json({
+          action: "User doesn't exist",
+        });
+      }
+    } catch (err) {
+      return res.status(500).json({
+        err,
+        action: "Get user_id",
+      });
+    }
 
     try {
       await client.query("DELETE FROM budget WHERE id = $1", [budget_id]);

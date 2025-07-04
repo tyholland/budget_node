@@ -57,5 +57,5 @@ export const routes = (app: Express) => {
   app.post("/category/create", getCategory);
 
   // Delete Category
-  app.delete("/category/remove", deleteCategory);
+  app.put("/category/remove", deleteCategory);
 };

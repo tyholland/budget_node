@@ -86,7 +86,23 @@ export const getCategory = (req: Request, res: Response) => {
 export const deleteCategory = (req: Request, res: Response) => {
   (async () => {
     const client = instance();
+    const auth_id = req.auth?.payload.sub;
     const { category_id } = req.body;
+
+    try {
+      const user_id = await getUserId(auth_id, client);
+
+      if (!user_id) {
+        return res.status(500).json({
+          action: "User doesn't exist",
+        });
+      }
+    } catch (err) {
+      return res.status(500).json({
+        err,
+        action: "Get user_id",
+      });
+    }
 
     try {
       await client.query("DELETE FROM category WHERE id = $1", [category_id]);
