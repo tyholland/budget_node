@@ -21,6 +21,7 @@ export const createUser = (req: Request, res: Response) => {
     const values = [auth_id, email, true, currentDate, 2];
     let user;
     let connectedAccount;
+    let category;
 
     try {
       user = await checkForExistingUser(auth_id, client);
@@ -33,12 +34,20 @@ export const createUser = (req: Request, res: Response) => {
             "SELECT * FROM budget WHERE user_id = $1",
             [connectedAccount?.user_id],
           );
+          category = await client.query(
+            "SELECT * FROM category WHERE user_id = $1",
+            [connectedAccount?.user_id],
+          );
         } catch (err) {
           console.error(err, "Failed to get Connected Account info");
 
           try {
             budgetInfo = await client.query<Budget>(
               "SELECT * FROM budget WHERE user_id = $1",
+              [user.id],
+            );
+            category = await client.query(
+              "SELECT * FROM category WHERE user_id = $1",
               [user.id],
             );
           } catch (err) {
@@ -55,6 +64,7 @@ export const createUser = (req: Request, res: Response) => {
           primary_request: connectedAccount?.main_account,
           shared_account_email: connectedAccount?.second_account,
           is_connected: connectedAccount?.is_connected || false,
+          categories: category?.rowCount ? category?.rows : [],
         });
       }
     } catch (err) {

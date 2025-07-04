@@ -13,11 +13,7 @@ import {
   getBudget,
   updateBudgetItem,
 } from "../controllers/budget";
-import {
-  addCategory,
-  deleteCategory,
-  getCategory,
-} from "../controllers/category";
+import { addCategory, deleteCategory } from "../controllers/category";
 
 export const routes = (app: Express) => {
   // Create User
@@ -50,11 +46,8 @@ export const routes = (app: Express) => {
   // Delete Budget Item
   app.delete("/budget/remove", deleteBudgetItem);
 
-  // Get Category
-  app.get("/category", addCategory);
-
   // Create Category
-  app.post("/category/create", getCategory);
+  app.post("/category/create", addCategory);
 
   // Delete Category
   app.put("/category/remove", deleteCategory);
