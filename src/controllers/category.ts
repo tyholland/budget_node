@@ -68,6 +68,10 @@ export const deleteCategory = (req: Request, res: Response) => {
 
     try {
       await client.query("DELETE FROM category WHERE id = $1", [category_id]);
+      await client.query(
+        "UPDATE budget SET category_id = $1 WHERE category_id = $2",
+        [null, category_id],
+      );
 
       return res.status(200).json({
         success: true,
