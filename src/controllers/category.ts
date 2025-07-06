@@ -26,7 +26,7 @@ export const addCategory = (req: Request, res: Response) => {
     }
 
     const insert =
-      "INSERT into category(user_id, name, modified_at) VALUES ($1, $2, $3) RETURNING id";
+      "INSERT into category(user_id, label, modified_at) VALUES ($1, $2, $3) RETURNING id";
     const values = [user_id, category, currentDate];
 
     try {
