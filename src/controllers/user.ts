@@ -13,12 +13,12 @@ import { QueryResult } from "pg";
 export const createUser = (req: Request, res: Response) => {
   (async () => {
     const client = instance();
-    const { email } = req.body;
+    const { email, plan } = req.body;
     const auth_id = req.auth?.payload.sub;
     const currentDate = new Date(Date.now()).toISOString();
     const insert =
       "INSERT into users(auth_id, email, active, modified_at, subscription_id) VALUES ($1, $2, $3, $4, $5)";
-    const values = [auth_id, email, true, currentDate, 2];
+    const values = [auth_id, email, true, currentDate, plan];
     let user;
     let connectedAccount;
     let category;
@@ -65,6 +65,7 @@ export const createUser = (req: Request, res: Response) => {
           shared_account_email: connectedAccount?.second_account,
           is_connected: connectedAccount?.is_connected || false,
           categories: category?.rowCount ? category?.rows : [],
+          paid_sub: user.paid_sub,
         });
       }
     } catch (err) {
@@ -241,6 +242,31 @@ export const removeSharedAccount = (req: Request, res: Response) => {
       return res.status(500).json({
         err,
         action: "Update 'is_connected' for an connected account",
+      });
+    }
+  })();
+};
+
+export const updateUserSub = (req: Request, res: Response) => {
+  (async () => {
+    const client = instance();
+    const { plan, paid } = req.body;
+    const auth_id = req.auth?.payload.sub;
+    const currentDate = new Date(Date.now()).toISOString();
+    const update =
+      "UPDATE users SET subscription_id = $1, paid_sub = $2, modified_at = $3 WHERE auth_id = $4";
+    const values = [plan, paid, currentDate, auth_id];
+
+    try {
+      await client.query(update, values);
+
+      return res.status(200).json({
+        success: true,
+      });
+    } catch (err) {
+      return res.status(500).json({
+        err,
+        action: "Update user sub",
       });
     }
   })();
