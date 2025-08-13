@@ -17,8 +17,8 @@ export const createUser = (req: Request, res: Response) => {
     const auth_id = req.auth?.payload.sub;
     const currentDate = new Date(Date.now()).toISOString();
     const insert =
-      "INSERT into users(auth_id, email, active, modified_at, subscription_id) VALUES ($1, $2, $3, $4, $5)";
-    const values = [auth_id, email, true, currentDate, plan];
+      "INSERT into users(auth_id, email, active, modified_at, subscription_id, created_at) VALUES ($1, $2, $3, $4, $5, $6)";
+    const values = [auth_id, email, true, currentDate, currentDate, plan];
     let user;
     let connectedAccount;
     let category;
@@ -66,6 +66,7 @@ export const createUser = (req: Request, res: Response) => {
           is_connected: connectedAccount?.is_connected || false,
           categories: category?.rowCount ? category?.rows : [],
           paid_sub: user.paid_sub,
+          created_at: user.created_at,
         });
       }
     } catch (err) {
