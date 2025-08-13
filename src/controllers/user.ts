@@ -104,6 +104,27 @@ export const deleteUser = (req: Request, res: Response) => {
     const values = [false, currentDate, auth_id];
 
     try {
+      const user = await checkForExistingUser(auth_id, client);
+
+      if (
+        user.exists &&
+        (user.subscription_id === 3 || user.subscription_id === 4)
+      ) {
+        return res.status(500).json({
+          success: false,
+          action:
+            "You need to cancel your subscription before deleting account",
+        });
+      }
+    } catch (err) {
+      return res.status(500).json({
+        err,
+        success: false,
+        action: "Failed to get user_id and check subscription",
+      });
+    }
+
+    try {
       const management = new ManagementClient({
         clientId: `${process.env.AUTH0_CLIENT_ID}`,
         clientSecret: `${process.env.AUTH0_CLIENT_SECRET}`,
@@ -117,6 +138,7 @@ export const deleteUser = (req: Request, res: Response) => {
     } catch (err) {
       return res.status(500).json({
         err,
+        success: false,
         action: "Failed to delete auth0 user",
       });
     }
@@ -130,6 +152,7 @@ export const deleteUser = (req: Request, res: Response) => {
     } catch (err) {
       return res.status(500).json({
         err,
+        success: false,
         action: "Delete user",
       });
     }
