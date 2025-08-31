@@ -17,7 +17,7 @@ export const createUser = (req: Request, res: Response) => {
     const auth_id = req.auth?.payload.sub;
     const currentDate = new Date(Date.now()).toISOString();
     const insert =
-      "INSERT into users(auth_id, email, active, modified_at, subscription_id, created_at) VALUES ($1, $2, $3, $4, $5, $6)";
+      "INSERT into users(auth_id, email, active, modified_at, subscription_id, subscribed_at) VALUES ($1, $2, $3, $4, $5, $6)";
     const values = [auth_id, email, true, currentDate, currentDate, plan];
     let user;
     let connectedAccount;
@@ -66,7 +66,7 @@ export const createUser = (req: Request, res: Response) => {
           is_connected: connectedAccount?.is_connected || false,
           categories: category?.rowCount ? category?.rows : [],
           paid_sub: user.paid_sub,
-          created_at: user.created_at,
+          subscribed_at: user.subscribed_at,
         });
       }
     } catch (err) {
@@ -277,9 +277,14 @@ export const updateUserSub = (req: Request, res: Response) => {
     const { plan, paid } = req.body;
     const auth_id = req.auth?.payload.sub;
     const currentDate = new Date(Date.now()).toISOString();
-    const update =
+    const updateFree =
       "UPDATE users SET subscription_id = $1, paid_sub = $2, modified_at = $3 WHERE auth_id = $4";
-    const values = [plan, paid, currentDate, auth_id];
+    const valuesFree = [plan, paid, currentDate, auth_id];
+    const updatePaid =
+      "UPDATE users SET subscription_id = $1, paid_sub = $2, modified_at = $3, subscribed_at = $4 WHERE auth_id = $5";
+    const valuesPaid = [plan, paid, currentDate, currentDate, auth_id];
+    const update = paid ? updatePaid : updateFree;
+    const values = paid ? valuesPaid : valuesFree;
 
     try {
       await client.query(update, values);

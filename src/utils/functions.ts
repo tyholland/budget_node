@@ -120,7 +120,8 @@ export const checkForExistingUser = async (
     subscription_id:
       user.rows.length > 0 ? user.rows[0].subscription_id : undefined,
     paid_sub: user.rows.length > 0 ? user.rows[0].paid_sub : undefined,
-    created_at: user.rows.length > 0 ? user.rows[0].created_at : undefined,
+    subscribed_at:
+      user.rows.length > 0 ? user.rows[0].subscribed_at : undefined,
   };
 };
 
