@@ -67,6 +67,7 @@ export const createUser = (req: Request, res: Response) => {
           categories: category?.rowCount ? category?.rows : [],
           paid_sub: user.paid_sub,
           subscribed_at: user.subscribed_at,
+          paypal_sub_id: user.paypal_sub_id,
         });
       }
     } catch (err) {
@@ -274,15 +275,22 @@ export const removeSharedAccount = (req: Request, res: Response) => {
 export const updateUserSub = (req: Request, res: Response) => {
   (async () => {
     const client = instance();
-    const { plan, paid } = req.body;
+    const { plan, paid, paypal_sub } = req.body;
     const auth_id = req.auth?.payload.sub;
     const currentDate = new Date(Date.now()).toISOString();
     const updateFree =
       "UPDATE users SET subscription_id = $1, paid_sub = $2, modified_at = $3 WHERE auth_id = $4";
     const valuesFree = [plan, paid, currentDate, auth_id];
     const updatePaid =
-      "UPDATE users SET subscription_id = $1, paid_sub = $2, modified_at = $3, subscribed_at = $4 WHERE auth_id = $5";
-    const valuesPaid = [plan, paid, currentDate, currentDate, auth_id];
+      "UPDATE users SET subscription_id = $1, paid_sub = $2, modified_at = $3, subscribed_at = $4, paypal_sub_id = $5 WHERE auth_id = $6";
+    const valuesPaid = [
+      plan,
+      paid,
+      currentDate,
+      currentDate,
+      paypal_sub,
+      auth_id,
+    ];
     const update = paid ? updatePaid : updateFree;
     const values = paid ? valuesPaid : valuesFree;
 
