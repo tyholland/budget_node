@@ -10,7 +10,6 @@ import {
 } from "../utils/functions";
 import { QueryResult } from "pg";
 import fetch from "node-fetch";
-import base64 from "base-64";
 
 export const createUser = (req: Request, res: Response) => {
   (async () => {
@@ -317,7 +316,8 @@ export const cancelUserSub = (req: Request, res: Response) => {
     const { paypal_sub } = req.body;
     const auth_id = req.auth?.payload.sub;
     const currentDate = new Date(Date.now()).toISOString();
-    let accessToken;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let tokenData: any;
 
     // Get paypal access token
     try {
@@ -326,20 +326,20 @@ export const cancelUserSub = (req: Request, res: Response) => {
         {
           method: "POST",
           headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
             Authorization:
-              "Basic" +
-              base64.encode(
+              "Basic " +
+              Buffer.from(
                 process.env.PAYPAL_CLIENT_ID +
                   ":" +
                   process.env.PAYPAL_CLIENT_SECRET,
-              ),
-            Accept: "application/json",
+              ).toString("base64"),
           },
-          body: JSON.stringify({ grant_type: "client_credentials" }),
+          body: "grant_type=client_credentials",
         },
       );
 
-      accessToken = await response.json();
+      tokenData = await response.json();
     } catch (err) {
       return res.status(500).json({
         err,
@@ -354,7 +354,7 @@ export const cancelUserSub = (req: Request, res: Response) => {
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            Authorization: `Bearer ${tokenData?.access_token}`,
             "Content-Type": "application/json",
             Accept: "application/json",
           },
