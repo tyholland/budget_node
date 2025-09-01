@@ -319,6 +319,7 @@ export const cancelUserSub = (req: Request, res: Response) => {
     const currentDate = new Date(Date.now()).toISOString();
     let accessToken;
 
+    // Get paypal access token
     try {
       const response = await fetch(
         `${process.env.PAYPAL_URL}/v1/oauth2/token`,
@@ -344,18 +345,26 @@ export const cancelUserSub = (req: Request, res: Response) => {
       });
     }
 
-    fetch(
-      `${process.env.PAYPAL_URL}/v1/billing/subscriptions/${paypal_sub}/cancel`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-          Accept: "application/json",
+    // Cancel paypal subscription
+    try {
+      await fetch(
+        `${process.env.PAYPAL_URL}/v1/billing/subscriptions/${paypal_sub}/cancel`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({ reason: "Not satisfied with the service" }),
         },
-        body: JSON.stringify({ reason: "Not satisfied with the service" }),
-      },
-    );
+      );
+    } catch (err) {
+      return res.status(500).json({
+        err,
+        action: "Failed to cancel paypal sub",
+      });
+    }
 
     const update =
       "UPDATE users SET subscription_id = $1, paid_sub = $2, modified_at = $3, paypal_sub_id = $4 WHERE auth_id = $5";
@@ -375,5 +384,3 @@ export const cancelUserSub = (req: Request, res: Response) => {
     }
   })();
 };
-
-export const changeUserSub = () => {};
