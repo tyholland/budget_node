@@ -329,7 +329,9 @@ export const cancelUserSub = (req: Request, res: Response) => {
             Authorization:
               "Basic" +
               base64.encode(
-                process.env.PAYPAL_CLIENT_ID + ":" + process.env.PAYPAL_SECRET,
+                process.env.PAYPAL_CLIENT_ID +
+                  ":" +
+                  process.env.PAYPAL_CLIENT_SECRET,
               ),
             Accept: "application/json",
           },
