@@ -9,6 +9,8 @@ import {
   getUserId,
 } from "../utils/functions";
 import { QueryResult } from "pg";
+import fetch from "node-fetch";
+import base64 from "base-64";
 
 export const createUser = (req: Request, res: Response) => {
   (async () => {
@@ -308,3 +310,70 @@ export const updateUserSub = (req: Request, res: Response) => {
     }
   })();
 };
+
+export const cancelUserSub = (req: Request, res: Response) => {
+  (async () => {
+    const client = instance();
+    const { paypal_sub } = req.body;
+    const auth_id = req.auth?.payload.sub;
+    const currentDate = new Date(Date.now()).toISOString();
+    let accessToken;
+
+    try {
+      const response = await fetch(
+        `${process.env.PAYPAL_URL}/v1/oauth2/token`,
+        {
+          method: "POST",
+          headers: {
+            Authorization:
+              "Basic" +
+              base64.encode(
+                process.env.PAYPAL_CLIENT_ID + ":" + process.env.PAYPAL_SECRET,
+              ),
+            Accept: "application/json",
+          },
+          body: JSON.stringify({ grant_type: "client_credentials" }),
+        },
+      );
+
+      accessToken = await response.json();
+    } catch (err) {
+      return res.status(500).json({
+        err,
+        action: "Failed to get paypal access token",
+      });
+    }
+
+    fetch(
+      `${process.env.PAYPAL_URL}/v1/billing/subscriptions/${paypal_sub}/cancel`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({ reason: "Not satisfied with the service" }),
+      },
+    );
+
+    const update =
+      "UPDATE users SET subscription_id = $1, paid_sub = $2, modified_at = $3, paypal_sub_id = $4 WHERE auth_id = $5";
+    const values = [2, false, currentDate, null, auth_id];
+
+    try {
+      await client.query(update, values);
+
+      return res.status(200).json({
+        success: true,
+      });
+    } catch (err) {
+      return res.status(500).json({
+        err,
+        action: "Cancel user sub",
+      });
+    }
+  })();
+};
+
+export const changeUserSub = () => {};

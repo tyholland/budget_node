@@ -1,5 +1,7 @@
 import { Express } from "express";
 import {
+  cancelUserSub,
+  changeUserSub,
   connectedAccountDecision,
   createUser,
   deleteUser,
@@ -34,6 +36,12 @@ export const routes = (app: Express) => {
 
   // Update user subscription
   app.put("/user/update/sub", updateUserSub);
+
+  // Cancel user subscription
+  app.put("/user/cancel/sub", cancelUserSub);
+
+  // Change user subscription
+  app.put("/user/change/sub", changeUserSub);
 
   // Get Budget
   app.get("/budget", getBudget);
