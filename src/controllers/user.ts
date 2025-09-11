@@ -56,6 +56,8 @@ export const createUser = (req: Request, res: Response) => {
           }
         }
 
+        // Check count of referrals
+
         return res.status(206).json({
           action: "User already exists",
           hasBudget: budgetInfo?.rowCount ? budgetInfo.rowCount > 0 : false,
@@ -80,6 +82,10 @@ export const createUser = (req: Request, res: Response) => {
 
     try {
       await client.query<User>(insert, values);
+
+      // Add user to referrals Table
+
+      // Add who referred user to referred_by Table
 
       return res.status(200).json({
         success: true,

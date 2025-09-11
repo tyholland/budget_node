@@ -59,4 +59,7 @@ export const routes = (app: Express) => {
 
   // Delete Category
   app.put("/category/remove", deleteCategory);
+
+  // Referral Start New Plan
+  app.put("/referral/start", deleteCategory);
 };
