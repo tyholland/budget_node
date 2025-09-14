@@ -15,12 +15,12 @@ import dayjs from "dayjs";
 export const createUser = (req: Request, res: Response) => {
   (async () => {
     const client = instance();
-    const { email, plan, referral_code } = req.body;
+    const { email, referral_code } = req.body;
     const auth_id = req.auth?.payload.sub;
     const currentDate = new Date(Date.now()).toISOString();
     const insert =
       "INSERT into users(auth_id, email, active, modified_at, subscription_id, subscribed_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id";
-    const values = [auth_id, email, true, currentDate, currentDate, plan];
+    const values = [auth_id, email, true, currentDate, currentDate, 2];
     let user;
     let connectedAccount;
     let category;
