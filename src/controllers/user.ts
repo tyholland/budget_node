@@ -10,6 +10,7 @@ import {
 } from "../utils/functions";
 import { QueryResult } from "pg";
 import fetch from "node-fetch";
+import dayjs from "dayjs";
 
 export const createUser = (req: Request, res: Response) => {
   (async () => {
@@ -70,19 +71,47 @@ export const createUser = (req: Request, res: Response) => {
         }
 
         // Remove referral subscription after 1 year from subscribed_at date
+        const referralPlan =
+          user.subscription_id === 6 || user.subscription_id === 7;
+        const referralSubscribeYearEnd = dayjs(user.subscribed_at).add(
+          1,
+          "year",
+        );
+        let updatedUser;
+
+        if (
+          referralPlan &&
+          dayjs(currentDate).isAfter(referralSubscribeYearEnd)
+        ) {
+          try {
+            const update =
+              "UPDATE users SET subscription_id = $1, paid_sub = $2, modified_at = $3, subscribed_at = $4 WHERE auth_id = $5 RETURNING subscription_id, subscribed_at, paid_sub";
+            const updateValues = [2, false, currentDate, currentDate, auth_id];
+
+            updatedUser = await client.query<User>(update, updateValues);
+          } catch (err) {
+            console.error(err, "Failed to remove referral plan subscription");
+          }
+        }
 
         return res.status(206).json({
           action: "User already exists",
           hasBudget: budgetInfo?.rowCount ? budgetInfo.rowCount > 0 : false,
-          subscription_id: user.subscription_id,
+          subscription_id: updatedUser?.rowCount
+            ? updatedUser.rows[0].subscription_id
+            : user.subscription_id,
           connected_message: connectedAccount?.exists || false,
           connected_id: connectedAccount?.id,
           primary_request: connectedAccount?.main_account,
           shared_account_email: connectedAccount?.second_account,
           is_connected: connectedAccount?.is_connected || false,
           categories: category?.rowCount ? category?.rows : [],
-          paid_sub: user.paid_sub,
-          subscribed_at: user.subscribed_at,
+          paid_sub: updatedUser?.rowCount
+            ? updatedUser.rows[0].paid_sub
+            : user.paid_sub,
+          subscribed_at: updatedUser?.rowCount
+            ? updatedUser.rows[0].subscribed_at
+            : user.subscribed_at,
           paypal_sub_id: user.paypal_sub_id,
           referral_code: userReferralCode,
           referral_count: referralCount?.rowCount ? referralCount.rowCount : 0,
