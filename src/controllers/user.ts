@@ -117,14 +117,16 @@ export const createUser = (req: Request, res: Response) => {
       }
 
       // Add who referred user to referred_by Table
-      try {
-        const referredByInsert =
-          "INSERT into referred_by(user_id, referred_by, created_at) VALUES ($1, $2, $3)";
-        const referredByValues = [createdUserId, referral_code, currentDate];
+      if (referral_code) {
+        try {
+          const referredByInsert =
+            "INSERT into referred_by(user_id, referred_by, created_at) VALUES ($1, $2, $3)";
+          const referredByValues = [createdUserId, referral_code, currentDate];
 
-        await client.query<ReferredBy>(referredByInsert, referredByValues);
-      } catch (err) {
-        console.error(err, "Failed to add record for referred_by");
+          await client.query<ReferredBy>(referredByInsert, referredByValues);
+        } catch (err) {
+          console.error(err, "Failed to add record for referred_by");
+        }
       }
 
       return res.status(200).json({
