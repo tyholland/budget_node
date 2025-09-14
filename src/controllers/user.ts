@@ -69,6 +69,8 @@ export const createUser = (req: Request, res: Response) => {
           console.error(err, "Failed to get Referral count");
         }
 
+        // Remove referral subscription after 1 year from subscribed_at date
+
         return res.status(206).json({
           action: "User already exists",
           hasBudget: budgetInfo?.rowCount ? budgetInfo.rowCount > 0 : false,
