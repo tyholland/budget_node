@@ -175,6 +175,24 @@ export const createUser = (req: Request, res: Response) => {
         }
       }
 
+      // Add default categories
+      const categories = ["Non-Discretionary", "Savings", "Fun Money"];
+
+      for (let i = 0; i <= categories.length; i++) {
+        try {
+          const insert =
+            "INSERT into category(user_id, label, modified_at) VALUES ($1, $2, $3) RETURNING id";
+          const values = [createdUserId, categories[i], currentDate];
+
+          await client.query(insert, values);
+        } catch (err) {
+          console.error(
+            err,
+            `Failed to add default categories of ${categories[i]}`,
+          );
+        }
+      }
+
       return res.status(200).json({
         success: true,
         hasBudget: false,
