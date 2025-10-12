@@ -74,6 +74,7 @@ export interface User {
   paid_sub: boolean;
   subscribed_at: string;
   paypal_sub_id: string;
+  currency: string;
 }
 
 export interface BudgetInsertIds {

@@ -19,7 +19,7 @@ export const createUser = (req: Request, res: Response) => {
     const auth_id = req.auth?.payload.sub;
     const currentDate = new Date(Date.now()).toISOString();
     const insert =
-      "INSERT into users(auth_id, email, active, modified_at, subscription_id, subscribed_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id";
+      "INSERT into users(auth_id, email, active, modified_at, subscription_id, subscribed_at, currency) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id";
     const values = [
       auth_id,
       email,
@@ -27,6 +27,7 @@ export const createUser = (req: Request, res: Response) => {
       currentDate,
       Number(plan) || 2,
       currentDate,
+      "USD",
     ];
     let user;
     let connectedAccount;
@@ -132,6 +133,9 @@ export const createUser = (req: Request, res: Response) => {
           paypal_sub_id: user.paypal_sub_id,
           referral_code: userReferralCode,
           referral_count: referralCount?.rowCount ? referralCount.rowCount : 0,
+          currency: updatedUser?.rowCount
+            ? updatedUser.rows[0].currency
+            : user.currency,
         });
       }
     } catch (err) {
@@ -201,6 +205,7 @@ export const createUser = (req: Request, res: Response) => {
         is_connected: false,
         referral_code: createdReferralCode,
         referral_count: 0,
+        currency: "USD",
       });
     } catch (err) {
       return res.status(500).json({
