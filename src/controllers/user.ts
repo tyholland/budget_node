@@ -463,3 +463,28 @@ export const cancelUserSub = (req: Request, res: Response) => {
     }
   })();
 };
+
+export const changeCurrency = (req: Request, res: Response) => {
+  (async () => {
+    const client = instance();
+    const { currency } = req.body;
+    const auth_id = req.auth?.payload.sub;
+    const currentDate = new Date(Date.now()).toISOString();
+    const update =
+      "UPDATE users SET currency = $1, modified_at = $2 WHERE auth_id = $3";
+    const values = [currency, currentDate, auth_id];
+
+    try {
+      await client.query(update, values);
+
+      return res.status(200).json({
+        success: true,
+      });
+    } catch (err) {
+      return res.status(500).json({
+        err,
+        action: "Update user currency",
+      });
+    }
+  })();
+};
