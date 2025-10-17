@@ -185,7 +185,7 @@ export const createUser = (req: Request, res: Response) => {
       for (let i = 0; i <= categories.length; i++) {
         try {
           const insert =
-            "INSERT into category(user_id, label, modified_at) VALUES ($1, $2, $3) RETURNING id";
+            "INSERT into category(user_id, label, modified_at) VALUES ($1, $2, $3)";
           const values = [createdUserId, categories[i], currentDate];
 
           await client.query(insert, values);
