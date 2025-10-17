@@ -22,6 +22,7 @@ export interface BudgetParam {
   amount: number;
   paid: boolean;
   frequency: string;
+  category_id?: number;
   budget_id?: number;
 }
 
