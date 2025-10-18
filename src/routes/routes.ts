@@ -41,7 +41,7 @@ export const routes = (app: Express) => {
   // Cancel user subscription
   app.put("/user/cancel/sub", cancelUserSub);
 
-  // Referral Start New Plan
+  // Change currency
   app.put("/user/currency", changeCurrency);
 
   // Get Budget
