@@ -19,7 +19,7 @@ export const createUser = (req: Request, res: Response) => {
     const auth_id = req.auth?.payload.sub;
     const currentDate = new Date(Date.now()).toISOString();
     const insert =
-      "INSERT into users(auth_id, email, active, modified_at, subscription_id, subscribed_at, currency) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id";
+      "INSERT into users(auth_id, email, active, modified_at, subscription_id, subscribed_at, currency, paid_sub) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id";
     const values = [
       auth_id,
       email,
@@ -28,6 +28,7 @@ export const createUser = (req: Request, res: Response) => {
       Number(plan) || 2,
       currentDate,
       "USD",
+      Number(plan) === 8,
     ];
     let user;
     let connectedAccount;
@@ -210,12 +211,13 @@ export const createUser = (req: Request, res: Response) => {
       return res.status(200).json({
         success: true,
         hasBudget: false,
-        subscription_id: Number(plan) || 2,
+        subscription_id: createdUser.rows[0].subscription_id,
         connected_message: false,
         is_connected: false,
         referral_code: createdReferralCode,
         referral_count: 0,
         currency: "USD",
+        paid_sub: createdUser.rows[0].paid_sub,
       });
     } catch (err) {
       return res.status(500).json({
