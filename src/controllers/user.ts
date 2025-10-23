@@ -148,34 +148,44 @@ export const createUser = (req: Request, res: Response) => {
     try {
       const createdUser = await client.query<User>(insert, values);
       const createdUserId = createdUser.rows[0].id;
-      const createdReferralCode = `SB-${createdUserId}`;
+      let createdReferralCode = null;
 
-      // Add user to referrals Table
-      try {
-        const referralInsert =
-          "INSERT into referrals(user_id, referral_code, referral_count, created_at) VALUES ($1, $2, $3, $4)";
-        const referralValues = [
-          createdUserId,
-          createdReferralCode,
-          0,
-          currentDate,
-        ];
+      if (Number(plan) === 8) {
+        createdReferralCode = `SB-Partner${createdUserId}`;
 
-        await client.query<Referrals>(referralInsert, referralValues);
-      } catch (err) {
-        console.error(err, "Failed to add user to Referrals");
+        // Add user to referrals Table
+        try {
+          const referralInsert =
+            "INSERT into referrals(user_id, referral_code, referral_count, created_at) VALUES ($1, $2, $3, $4)";
+          const referralValues = [
+            createdUserId,
+            createdReferralCode,
+            0,
+            currentDate,
+          ];
+
+          await client.query<Referrals>(referralInsert, referralValues);
+        } catch (err) {
+          console.error(err, "Failed to add user to Referrals");
+        }
       }
 
-      // Add who referred user to referred_by Table
-      if (referral_code) {
-        try {
-          const referredByInsert =
-            "INSERT into referred_by(user_id, referred_by, created_at) VALUES ($1, $2, $3)";
-          const referredByValues = [createdUserId, referral_code, currentDate];
+      if (Number(plan) === 9) {
+        // Add who referred user to referred_by Table
+        if (referral_code) {
+          try {
+            const referredByInsert =
+              "INSERT into referred_by(user_id, referred_by, created_at) VALUES ($1, $2, $3)";
+            const referredByValues = [
+              createdUserId,
+              referral_code,
+              currentDate,
+            ];
 
-          await client.query<ReferredBy>(referredByInsert, referredByValues);
-        } catch (err) {
-          console.error(err, "Failed to add record for referred_by");
+            await client.query<ReferredBy>(referredByInsert, referredByValues);
+          } catch (err) {
+            console.error(err, "Failed to add record for referred_by");
+          }
         }
       }
 
