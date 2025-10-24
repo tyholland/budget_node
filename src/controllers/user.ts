@@ -19,7 +19,7 @@ export const createUser = (req: Request, res: Response) => {
     const auth_id = req.auth?.payload.sub;
     const currentDate = new Date(Date.now()).toISOString();
     const insert =
-      "INSERT into users(auth_id, email, active, modified_at, subscription_id, subscribed_at, currency, paid_sub) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id";
+      "INSERT into users(auth_id, email, active, modified_at, subscription_id, subscribed_at, currency, paid_sub) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, subscription_id, paid_sub";
     const values = [
       auth_id,
       email,
@@ -33,14 +33,14 @@ export const createUser = (req: Request, res: Response) => {
     let user;
     let connectedAccount;
     let category;
-    let referralCount;
+    let allReferrals;
 
     try {
       user = await checkForExistingUser(auth_id, client);
       let budgetInfo: QueryResult<Budget> | undefined = undefined;
 
       if (user.exists) {
-        const userReferralCode = `SB-${user.id}`;
+        const userReferralCode = `SB-Partner${user.id}`;
 
         try {
           connectedAccount = await checkConnectAccountExists(user.id, client);
@@ -71,8 +71,8 @@ export const createUser = (req: Request, res: Response) => {
 
         // Check count of referrals
         try {
-          referralCount = await client.query<Budget>(
-            "SELECT * FROM referred_by WHERE referred_by = $1",
+          allReferrals = await client.query<Budget>(
+            "SELECT rb.first_name, rb.last_name, u.id, u.email FROM referred_by rb, users u WHERE rb.referred_by = $1 AND rb.user_id = u.id",
             [userReferralCode],
           );
         } catch (err) {
@@ -133,7 +133,7 @@ export const createUser = (req: Request, res: Response) => {
             : user.subscribed_at,
           paypal_sub_id: user.paypal_sub_id,
           referral_code: userReferralCode,
-          referral_count: referralCount?.rowCount ? referralCount.rowCount : 0,
+          all_referrals: allReferrals?.rowCount ? allReferrals.rows : [],
           currency: updatedUser?.rowCount
             ? updatedUser.rows[0].currency
             : user.currency,
@@ -215,7 +215,7 @@ export const createUser = (req: Request, res: Response) => {
         connected_message: false,
         is_connected: false,
         referral_code: createdReferralCode,
-        referral_count: 0,
+        all_referrals: [],
         currency: "USD",
         paid_sub: createdUser.rows[0].paid_sub,
       });
