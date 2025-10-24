@@ -40,7 +40,7 @@ export const createUser = (req: Request, res: Response) => {
       let budgetInfo: QueryResult<Budget> | undefined = undefined;
 
       if (user.exists) {
-        const userReferralCode = `SB-Partner${user.id}`;
+        let userReferralCode = null;
 
         try {
           connectedAccount = await checkConnectAccountExists(user.id, client);
@@ -69,14 +69,18 @@ export const createUser = (req: Request, res: Response) => {
           }
         }
 
-        // Check count of referrals
-        try {
-          allReferrals = await client.query<Budget>(
-            "SELECT rb.first_name, rb.last_name, u.id, u.email FROM referred_by rb, users u WHERE rb.referred_by = $1 AND rb.user_id = u.id",
-            [userReferralCode],
-          );
-        } catch (err) {
-          console.error(err, "Failed to get Referral count");
+        // Collect all partner clients
+        if (Number(plan) === 8) {
+          userReferralCode = `SB-Partner${user.id}`;
+
+          try {
+            allReferrals = await client.query<Budget>(
+              "SELECT rb.first_name, rb.last_name, u.id, u.email FROM referred_by rb, users u WHERE rb.referred_by = $1 AND rb.user_id = u.id",
+              [userReferralCode],
+            );
+          } catch (err) {
+            console.error(err, "Failed to get Referral count");
+          }
         }
 
         // Remove referral subscription after 1 year from subscribed_at date
