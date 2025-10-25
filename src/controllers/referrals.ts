@@ -1,5 +1,14 @@
 import { Request, Response } from "express";
 import { instance } from "../utils/postgres";
+import {
+  Budget,
+  BudgetDate,
+  BudgetItem,
+  BudgetResponse,
+  User,
+} from "../utils/types";
+import { QueryResult } from "pg";
+import { sortBudget } from "../utils/functions";
 
 export const updateReferralName = (req: Request, res: Response) => {
   (async () => {
@@ -38,6 +47,164 @@ export const updateReferralName = (req: Request, res: Response) => {
       return res.status(500).json({
         err,
         action: "Update referral with display name",
+      });
+    }
+  })();
+};
+
+export const getClientData = (req: Request, res: Response) => {
+  (async () => {
+    const client = instance();
+    const { client_id } = req.params;
+    const auth_id = req.auth?.payload.sub;
+    const select = "SELECT * FROM users WHERE id = $1";
+    const values = [client_id];
+
+    try {
+      const correctUser = await client.query(
+        "SELECT * FROM referrals r, users u, referred_by rb WHERE u.auth_id = $1 AND u.id = r.user_id AND rb.referred_by = r.referral_code AND rb.user_id = $2",
+        [auth_id, client_id],
+      );
+
+      if (correctUser.rowCount) {
+        let budgetInfo: QueryResult<Budget> | undefined = undefined;
+        let category;
+        const userReferralCode = null;
+
+        try {
+          const partnerClient = await client.query<User>(select, values);
+
+          if (partnerClient.rowCount) {
+            const user = partnerClient.rows[0];
+
+            try {
+              budgetInfo = await client.query<Budget>(
+                "SELECT * FROM budget WHERE user_id = $1",
+                [user.id],
+              );
+              category = await client.query(
+                "SELECT * FROM category WHERE user_id = $1",
+                [user.id],
+              );
+            } catch (err) {
+              console.error(err, "Failed to get Account budget info");
+            }
+
+            return res.status(200).json({
+              hasBudget: budgetInfo?.rowCount ? budgetInfo.rowCount > 0 : false,
+              subscription_id: user.subscription_id,
+              connected_message: false,
+              is_connected: false,
+              categories: category?.rowCount ? category?.rows : [],
+              paid_sub: user.paid_sub,
+              subscribed_at: user.subscribed_at,
+              paypal_sub_id: user.paypal_sub_id,
+              referral_code: userReferralCode,
+              all_referrals: [],
+              currency: user.currency,
+            });
+          }
+        } catch (err) {
+          return res.status(500).json({
+            err,
+            action: "Failed to get client user data",
+          });
+        }
+      }
+    } catch (err) {
+      return res.status(500).json({
+        err,
+        action: "Failed to confirm partner has access to client",
+      });
+    }
+  })();
+};
+
+export const getClientBudget = (req: Request, res: Response) => {
+  (async () => {
+    const client = instance();
+    const { client_id } = req.params;
+    const auth_id = req.auth?.payload.sub;
+
+    try {
+      const correctUser = await client.query(
+        "SELECT * FROM referrals r, users u, referred_by rb WHERE u.auth_id = $1 AND u.id = r.user_id AND rb.referred_by = r.referral_code AND rb.user_id = $2",
+        [auth_id, client_id],
+      );
+
+      if (correctUser.rowCount) {
+        try {
+          const budgetDate = await client.query<BudgetDate>(
+            "SELECT * FROM budget_date WHERE user_id = $1",
+            [client_id],
+          );
+          const fullBudget: BudgetResponse[] = [];
+
+          for (let i = 0; i <= budgetDate.rows.length - 1; i++) {
+            const { id, year, month } = budgetDate.rows[i];
+            const income: BudgetItem[] = [];
+            const expense: BudgetItem[] = [];
+
+            try {
+              const budgetIncome = await client.query<Budget>(
+                "SELECT * FROM budget WHERE budget_date_id = $1 AND type = $2",
+                [id, "income"],
+              );
+              const budgetExpense = await client.query<Budget>(
+                "SELECT * FROM budget WHERE budget_date_id = $1 AND type = $2",
+                [id, "expense"],
+              );
+
+              budgetIncome.rows.forEach((response: Budget) => {
+                income.push({
+                  label: response.label,
+                  value: Number(response.amount),
+                  paid: response.paid,
+                  budget_id: response.id,
+                  budget_date_id: response.budget_date_id,
+                });
+              });
+
+              budgetExpense.rows.forEach((response: Budget) => {
+                expense.push({
+                  label: response.label,
+                  value: Number(response.amount),
+                  paid: response.paid,
+                  frequency: response.frequency,
+                  category_id: response.category_id,
+                  budget_id: response.id,
+                  budget_date_id: response.budget_date_id,
+                });
+              });
+
+              fullBudget.push({
+                year: year,
+                month: month,
+                income: income.sort(sortBudget),
+                expense: expense.sort(sortBudget),
+              });
+            } catch (err) {
+              return res.status(500).json({
+                err,
+                action: "Get budget info",
+              });
+            }
+          }
+
+          return res.status(200).json({
+            budget: fullBudget,
+          });
+        } catch (err) {
+          return res.status(500).json({
+            err,
+            action: "Get budget_date info",
+          });
+        }
+      }
+    } catch (err) {
+      return res.status(500).json({
+        err,
+        action: "Failed to confirm partner has access to client",
       });
     }
   })();
