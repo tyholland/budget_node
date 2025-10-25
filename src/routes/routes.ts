@@ -17,7 +17,7 @@ import {
   updateBudgetItem,
 } from "../controllers/budget";
 import { addCategory, deleteCategory } from "../controllers/category";
-import { startReferralPlan } from "../controllers/referrals";
+import { updateReferralName } from "../controllers/referrals";
 
 export const routes = (app: Express) => {
   // Create User
@@ -66,5 +66,5 @@ export const routes = (app: Express) => {
   app.put("/category/remove", deleteCategory);
 
   // Referral Start New Plan
-  app.put("/referral/start", startReferralPlan);
+  app.put("/referral/name", updateReferralName);
 };
