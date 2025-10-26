@@ -25,7 +25,7 @@ export const updateReferralName = (req: Request, res: Response) => {
         [auth_id, referral_code],
       );
 
-      if (correctUser.rowCount) {
+      if (correctUser.rowCount && correctUser.rowCount > 0) {
         try {
           await client.query(update, values);
 
@@ -41,6 +41,7 @@ export const updateReferralName = (req: Request, res: Response) => {
       } else {
         return res.status(404).json({
           action: "You don't have access to update this account",
+          status: 404,
         });
       }
     } catch (err) {
@@ -66,7 +67,7 @@ export const getClientData = (req: Request, res: Response) => {
         [auth_id, client_id],
       );
 
-      if (correctUser.rowCount) {
+      if (correctUser.rowCount && correctUser.rowCount > 0) {
         let budgetInfo: QueryResult<Budget> | undefined = undefined;
         let category;
         const userReferralCode = null;
@@ -110,6 +111,11 @@ export const getClientData = (req: Request, res: Response) => {
             action: "Failed to get client user data",
           });
         }
+      } else {
+        return res.status(404).json({
+          action: "User doesn't have access to client",
+          status: 404,
+        });
       }
     } catch (err) {
       return res.status(500).json({
@@ -132,7 +138,7 @@ export const getClientBudget = (req: Request, res: Response) => {
         [auth_id, client_id],
       );
 
-      if (correctUser.rowCount) {
+      if (correctUser.rowCount && correctUser.rowCount > 0) {
         try {
           const budgetDate = await client.query<BudgetDate>(
             "SELECT * FROM budget_date WHERE user_id = $1",
@@ -200,11 +206,16 @@ export const getClientBudget = (req: Request, res: Response) => {
             action: "Get budget_date info",
           });
         }
+      } else {
+        return res.status(404).json({
+          action: "User doesn't have access to client's budget",
+          status: 404,
+        });
       }
     } catch (err) {
       return res.status(500).json({
         err,
-        action: "Failed to confirm partner has access to client",
+        action: "Failed to confirm partner has access to client's budget",
       });
     }
   })();
