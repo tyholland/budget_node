@@ -70,7 +70,7 @@ export const createUser = (req: Request, res: Response) => {
         }
 
         // Collect all partner clients
-        if (Number(plan) === 8) {
+        if (user.subscription_id === 8) {
           userReferralCode = `SB-Partner${user.id}`;
 
           try {
