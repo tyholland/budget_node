@@ -1,8 +1,17 @@
 import { Client, QueryResult } from "pg";
-import { AddedBudgetItem, BudgetItem, ConnectedAccount, User } from "./types";
+import {
+  AddedBudgetItem,
+  Budget,
+  BudgetItem,
+  ConnectedAccount,
+  Referrals,
+  ReferredBy,
+  User,
+} from "./types";
 import { listOfMonths } from "./constants";
 import { Response } from "express";
 import fetch from "node-fetch";
+import dayjs from "dayjs";
 
 export const sortBudget = (a: BudgetItem, b: BudgetItem) => {
   return a.label.toLowerCase() > b.label.toLowerCase()
@@ -118,15 +127,7 @@ export const checkForExistingUser = async (
 
   return {
     exists: user.rowCount ? user.rowCount > 0 : false,
-    id: user.rows.length > 0 ? user.rows[0].id : undefined,
-    subscription_id:
-      user.rows.length > 0 ? user.rows[0].subscription_id : undefined,
-    paid_sub: user.rows.length > 0 ? user.rows[0].paid_sub : undefined,
-    subscribed_at:
-      user.rows.length > 0 ? user.rows[0].subscribed_at : undefined,
-    paypal_sub_id:
-      user.rows.length > 0 ? user.rows[0].paypal_sub_id : undefined,
-    currency: user.rows.length > 0 ? user.rows[0].currency : undefined,
+    ...user.rows[0],
   };
 };
 
@@ -404,4 +405,230 @@ export const cancelPaypalSubscription = async (
       action: "Failed to cancel paypal sub",
     });
   }
+};
+
+export const addCategories = async (
+  createdUserId: number,
+  currentDate: string,
+  client: Client,
+) => {
+  const categories = ["Non-Discretionary", "Savings", "Fun Money"];
+
+  for (let i = 0; i <= categories.length - 1; i++) {
+    try {
+      const insert =
+        "INSERT into category(user_id, label, modified_at) VALUES ($1, $2, $3)";
+      const values = [createdUserId, categories[i], currentDate];
+
+      await client.query(insert, values);
+    } catch (err) {
+      console.error(
+        err,
+        `Failed to add default categories of ${categories[i]}`,
+      );
+    }
+  }
+};
+
+export const handleReferrals = async (
+  createdUserId: number,
+  currentDate: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  plan: any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  referral_code: any,
+  client: Client,
+) => {
+  const createdReferralCode = `SB-Partner${createdUserId}`;
+
+  if (Number(plan) === 8) {
+    // Add user to referrals Table
+    try {
+      const referralInsert =
+        "INSERT into referrals(user_id, referral_code, referral_count, created_at) VALUES ($1, $2, $3, $4)";
+      const referralValues = [
+        createdUserId,
+        createdReferralCode,
+        0,
+        currentDate,
+      ];
+
+      await client.query<Referrals>(referralInsert, referralValues);
+    } catch (err) {
+      console.error(err, "Failed to add user to Referrals");
+    }
+  }
+
+  if (Number(plan) === 9) {
+    // Add who referred user to referred_by Table
+    if (referral_code) {
+      try {
+        const referredByInsert =
+          "INSERT into referred_by(user_id, referred_by, created_at) VALUES ($1, $2, $3)";
+        const referredByValues = [createdUserId, referral_code, currentDate];
+
+        await client.query<ReferredBy>(referredByInsert, referredByValues);
+      } catch (err) {
+        console.error(err, "Failed to add record for referred_by");
+      }
+    }
+  }
+
+  return createdReferralCode;
+};
+
+export const removeSubscriptionAfterTrial = async (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  user: any,
+  currentDate: string,
+  auth_id: string | undefined,
+  client: Client,
+) => {
+  const referralPlan = user.subscription_id === 6 || user.subscription_id === 7;
+  const referralSubscribeYearEnd = dayjs(user.subscribed_at).add(1, "month");
+  let updatedUser;
+
+  if (referralPlan && dayjs(currentDate).isAfter(referralSubscribeYearEnd)) {
+    try {
+      const update =
+        "UPDATE users SET subscription_id = $1, paid_sub = $2, modified_at = $3, subscribed_at = $4 WHERE auth_id = $5 RETURNING subscription_id, subscribed_at, paid_sub";
+      const updateValues = [2, false, currentDate, currentDate, auth_id];
+
+      updatedUser = await client.query<User>(update, updateValues);
+    } catch (err) {
+      console.error(err, "Failed to remove referral plan subscription");
+    }
+  }
+
+  return updatedUser;
+};
+
+export const getMedalGameData = async (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  user: any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  category: any,
+  budgetInfo: QueryResult<Budget>,
+  // auth_id: string | undefined,
+  // client: Client,
+) => {
+  let totalPoints = 4;
+  let expenses_in_category_1 = false;
+  let expenses_in_category_2 = false;
+  let expenses_in_category_3 = false;
+  let edit_expense_in_month = false;
+  const add_expense_in_month = false;
+  let edit_income_in_month = false;
+  const add_income_in_month = false;
+  const add_category_in_month = false;
+  const currentYear = dayjs().year();
+  const currentMonth = dayjs().month();
+
+  // Pro plan
+  if (user.subscription_id === 4) {
+    totalPoints += 15;
+  }
+
+  // Starter plan
+  if (user.subscription_id === 3) {
+    totalPoints += 10;
+  }
+
+  if (budgetInfo?.rowCount && budgetInfo.rowCount > 0) {
+    // Has budget
+    totalPoints += 8;
+
+    // Has expenses under Non-Discretionary, Savings, and/or Fun Money
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    category.forEach((result: any) => {
+      if (result.label === "Non-Discretionary") {
+        const hasCategory = budgetInfo.rows.some(
+          (item: Budget) =>
+            item.user_id === user.id &&
+            item.category_id === result.id &&
+            dayjs(item.modified_at).year() === currentYear,
+        );
+
+        if (hasCategory) {
+          totalPoints += 4;
+          expenses_in_category_1 = true;
+        }
+      }
+
+      if (result.label === "Savings") {
+        const hasCategory = budgetInfo.rows.some(
+          (item: Budget) =>
+            item.user_id === user.id &&
+            item.category_id === result.id &&
+            dayjs(item.modified_at).year() === currentYear,
+        );
+
+        if (hasCategory) {
+          totalPoints += 4;
+          expenses_in_category_2 = true;
+        }
+      }
+
+      if (result.label === "Fun Money") {
+        const hasCategory = budgetInfo.rows.some(
+          (item: Budget) =>
+            item.user_id === user.id &&
+            item.category_id === result.id &&
+            dayjs(item.modified_at).year() === currentYear,
+        );
+
+        if (hasCategory) {
+          totalPoints += 4;
+          expenses_in_category_3 = true;
+        }
+      }
+    });
+
+    const hasEditedIncome = budgetInfo.rows.some((item: Budget) => {
+      const isUser = item.user_id === user.id;
+      const isMonth = dayjs(item.modified_at).month() === currentMonth;
+      const isYear = dayjs(item.modified_at).year() === currentYear;
+      const isIncome = item.type === "income";
+      const isDifferent = dayjs(item.modified_at).isAfter(
+        dayjs(user.subscribed_at),
+      );
+
+      return isUser && isMonth && isYear && isIncome && isDifferent;
+    });
+
+    if (hasEditedIncome) {
+      totalPoints += 2;
+      edit_income_in_month = true;
+    }
+
+    const hasEditedExpense = budgetInfo.rows.some((item: Budget) => {
+      const isUser = item.user_id === user.id;
+      const isMonth = dayjs(item.modified_at).month() === currentMonth;
+      const isYear = dayjs(item.modified_at).year() === currentYear;
+      const isIncome = item.type === "expense";
+      const isDifferent = dayjs(item.modified_at).isAfter(
+        dayjs(user.subscribed_at),
+      );
+
+      return isUser && isMonth && isYear && isIncome && isDifferent;
+    });
+
+    if (hasEditedExpense) {
+      totalPoints += 4;
+      edit_expense_in_month = true;
+    }
+  }
+
+  return {
+    total_medal_points: totalPoints,
+    shared_account: false,
+    expenses_in_category_1,
+    expenses_in_category_2,
+    expenses_in_category_3,
+    edit_expense_in_month,
+    add_expense_in_month,
+    edit_income_in_month,
+    add_income_in_month,
+    add_category_in_month,
+  };
 };
