@@ -507,8 +507,8 @@ export const getMedalGameData = async (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   user: any,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  category: any,
-  budgetInfo: QueryResult<Budget>,
+  category: any[],
+  budgetInfo: QueryResult<Budget> | undefined,
   // auth_id: string | undefined,
   // client: Client,
 ) => {

@@ -7,6 +7,7 @@ import {
   cancelPaypalSubscription,
   checkConnectAccountExists,
   checkForExistingUser,
+  getMedalGameData,
   getUserByEmail,
   getUserId,
   handleReferrals,
@@ -94,18 +95,11 @@ export const createUser = (req: Request, res: Response) => {
         );
 
         // Get medal game reults
-        const medal_game = {
-          total_medal_points: 31,
-          shared_account: true,
-          expenses_in_category_1: true,
-          expenses_in_category_2: false,
-          expenses_in_category_3: true,
-          edit_expense_in_month: true,
-          add_expense_in_month: false,
-          edit_income_in_month: false,
-          add_income_in_month: true,
-          add_category_in_month: false,
-        };
+        const medal_game = await getMedalGameData(
+          user,
+          category?.rowCount ? category?.rows : [],
+          budgetInfo,
+        );
 
         return res.status(206).json({
           action: "User already exists",
