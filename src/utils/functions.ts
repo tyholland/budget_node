@@ -584,6 +584,13 @@ export const getMedalGameData = async (
       }
     });
 
+    /**********************************
+     * Things to fix for below:
+     * Get the actual month and not the modified_at
+     * Get edits for every month
+     * Figure out how to get adds for the month???
+     */
+
     const hasEditedIncome = budgetInfo.rows.some((item: Budget) => {
       const isUser = item.user_id === user.id;
       const isMonth = dayjs(item.modified_at).month() === currentMonth;
