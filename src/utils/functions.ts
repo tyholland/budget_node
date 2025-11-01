@@ -517,9 +517,7 @@ export const getMedalGameData = async (
   let expenses_in_category_2 = false;
   let expenses_in_category_3 = false;
   let edit_expense_in_month = false;
-  const add_expense_in_month = false;
   let edit_income_in_month = false;
-  const add_income_in_month = false;
   const add_category_in_month = false;
   const currentYear = dayjs().year();
   const currentMonth = dayjs().month();
@@ -633,9 +631,7 @@ export const getMedalGameData = async (
     expenses_in_category_2,
     expenses_in_category_3,
     edit_expense_in_month,
-    add_expense_in_month,
     edit_income_in_month,
-    add_income_in_month,
     add_category_in_month,
   };
 };
