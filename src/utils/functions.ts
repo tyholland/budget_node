@@ -602,7 +602,7 @@ export const getMedalGameData = async (
     });
 
     if (hasEditedIncome) {
-      totalPoints += 2;
+      totalPoints += 6;
       edit_income_in_month = true;
     }
 
@@ -619,7 +619,7 @@ export const getMedalGameData = async (
     });
 
     if (hasEditedExpense) {
-      totalPoints += 4;
+      totalPoints += 7;
       edit_expense_in_month = true;
     }
   }
