@@ -586,7 +586,7 @@ export const getMedalGameData = async (
      * Things to fix for below:
      * Get the actual month and not the modified_at
      * Get edits for every month
-     * Figure out how to get adds for the month???
+     * Update medal_game table
      */
 
     const hasEditedIncome = budgetInfo.rows.some((item: Budget) => {
