@@ -699,8 +699,15 @@ export const getMedalGameData = async (
       // Insert the medal game
       try {
         updatedMedalGame = await client.query(
-          "INSERT into medal_game(user_id, claimed_prize, year, total_points, created_at, modified_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING claimed_prize,",
-          [user.id, false, currentYear, totalPoints, currentDate, currentDate],
+          "INSERT into medal_game(user_id, claimed_prize, year, total_points, created_at, modified_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING claimed_prize",
+          [
+            Number(user.id),
+            false,
+            currentYear,
+            totalPoints,
+            currentDate,
+            currentDate,
+          ],
         );
       } catch (err) {
         console.error(err, "Failed to insert medal game");
