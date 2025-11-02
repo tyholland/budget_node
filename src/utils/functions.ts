@@ -485,7 +485,7 @@ export const removeSubscriptionAfterTrial = async (
   auth_id: string | undefined,
   client: Client,
 ) => {
-  const referralPlan = user.subscription_id === 6 || user.subscription_id === 7;
+  const referralPlan = user.subscription_id === 10;
   const referralSubscribeYearEnd = dayjs(user.subscribed_at).add(1, "month");
   let updatedUser;
 
