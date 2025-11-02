@@ -2,6 +2,7 @@ import { Client, QueryResult } from "pg";
 import {
   AddedBudgetItem,
   Budget,
+  BudgetDate,
   BudgetItem,
   ConnectedAccount,
   Referrals,
@@ -509,32 +510,48 @@ export const getMedalGameData = async (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   category: any[],
   budgetInfo: QueryResult<Budget> | undefined,
-  // auth_id: string | undefined,
-  // client: Client,
+  currentDate: string,
+  client: Client,
 ) => {
-  let totalPoints = 4;
+  let totalPoints = 10;
   let expenses_in_category_1 = false;
   let expenses_in_category_2 = false;
   let expenses_in_category_3 = false;
   let edit_expense_in_month = false;
   let edit_income_in_month = false;
-  const add_category_in_month = false;
+  let add_category_in_month = false;
   const currentYear = dayjs().year();
-  const currentMonth = dayjs().month();
+  let budgetDate;
+  let sharedAccount;
 
   // Pro plan
   if (user.subscription_id === 4) {
-    totalPoints += 15;
+    totalPoints += 25;
   }
 
   // Starter plan
   if (user.subscription_id === 3) {
-    totalPoints += 10;
+    totalPoints += 20;
   }
 
+  // Shared account
+  try {
+    sharedAccount = await client.query(
+      "SELECT * FROM connected_accounts WHERE main_account = $1 OR allowed_account = $2 AND is_connected = $3",
+      [user.id, user.id, true],
+    );
+  } catch (err) {
+    console.error(err, "Failed to get budget date");
+  }
+
+  if (sharedAccount?.rowCount && sharedAccount.rowCount > 0) {
+    totalPoints += 15;
+  }
+
+  // Budget, Category, and Edits in a month
   if (budgetInfo?.rowCount && budgetInfo.rowCount > 0) {
     // Has budget
-    totalPoints += 8;
+    totalPoints += 14;
 
     // Has expenses under Non-Discretionary, Savings, and/or Fun Money
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -580,48 +597,114 @@ export const getMedalGameData = async (
           expenses_in_category_3 = true;
         }
       }
+
+      // Category that isn't one of the 3 default categories
+      if (
+        result.label !== "Fun Money" &&
+        result.label !== "Savings" &&
+        result.label !== "Non-Discretionary"
+      ) {
+        const hasCategory = budgetInfo.rows.some(
+          (item: Budget) =>
+            item.user_id === user.id &&
+            item.category_id === result.id &&
+            dayjs(item.modified_at).year() === currentYear,
+        );
+
+        if (hasCategory) {
+          totalPoints += 3;
+          add_category_in_month = true;
+        }
+      }
     });
 
-    /**********************************
-     * Things to fix for below:
-     * Get the actual month and not the modified_at
-     * Get edits for every month
-     * Update medal_game table
-     */
-
-    const hasEditedIncome = budgetInfo.rows.some((item: Budget) => {
-      const isUser = item.user_id === user.id;
-      const isMonth = dayjs(item.modified_at).month() === currentMonth;
-      const isYear = dayjs(item.modified_at).year() === currentYear;
-      const isIncome = item.type === "income";
-      const isDifferent = dayjs(item.modified_at).isAfter(
-        dayjs(user.subscribed_at),
+    // Get Budget Date info
+    try {
+      budgetDate = await client.query<BudgetDate>(
+        "SELECT * FROM budget_date WHERE user_id = $1",
+        [user.id],
       );
-
-      return isUser && isMonth && isYear && isIncome && isDifferent;
-    });
-
-    if (hasEditedIncome) {
-      totalPoints += 6;
-      edit_income_in_month = true;
+    } catch (err) {
+      console.error(err, "Failed to get budget date");
     }
 
-    const hasEditedExpense = budgetInfo.rows.some((item: Budget) => {
-      const isUser = item.user_id === user.id;
-      const isMonth = dayjs(item.modified_at).month() === currentMonth;
-      const isYear = dayjs(item.modified_at).year() === currentYear;
-      const isIncome = item.type === "expense";
-      const isDifferent = dayjs(item.modified_at).isAfter(
-        dayjs(user.subscribed_at),
-      );
+    budgetDate?.rows.forEach((budget: BudgetDate) => {
+      const isYear = budget.year === currentYear;
 
-      return isUser && isMonth && isYear && isIncome && isDifferent;
+      if (isYear) {
+        // Has edited income for the month
+        const hasEditedIncome = budgetInfo.rows.some((item: Budget) => {
+          const isUser = item.user_id === user.id;
+          const isBudgetDate = budget.id === item.budget_date_id;
+          const isMonth =
+            listOfMonths[dayjs(item.modified_at).month()] === budget.month;
+          const isIncome = item.type === "income";
+          const isDifferent = dayjs(item.modified_at).isAfter(
+            dayjs(user.subscribed_at),
+          );
+
+          return isUser && isBudgetDate && isMonth && isIncome && isDifferent;
+        });
+
+        if (hasEditedIncome) {
+          totalPoints += 6;
+          edit_income_in_month = true;
+        }
+
+        // Has edited expense for the month
+        const hasEditedExpense = budgetInfo.rows.some((item: Budget) => {
+          const isUser = item.user_id === user.id;
+          const isBudgetDate = budget.id === item.budget_date_id;
+          const isMonth =
+            listOfMonths[dayjs(item.modified_at).month()] === budget.month;
+          const isIncome = item.type === "expense";
+          const isDifferent = dayjs(item.modified_at).isAfter(
+            dayjs(user.subscribed_at),
+          );
+
+          return isUser && isBudgetDate && isMonth && isIncome && isDifferent;
+        });
+
+        if (hasEditedExpense) {
+          totalPoints += 7;
+          edit_expense_in_month = true;
+        }
+      }
     });
+  }
 
-    if (hasEditedExpense) {
-      totalPoints += 7;
-      edit_expense_in_month = true;
+  let medalGame;
+
+  try {
+    // Check for medal game for the user
+    medalGame = await client.query(
+      "SELECT * FROM medal_game WHERE user_id = $1 and year = $2",
+      [user.id, currentYear],
+    );
+
+    if (medalGame.rowCount) {
+      // Update the medal game
+      try {
+        await client.query(
+          "UPDATE medal_game SET total_points = $1, modified_at = $2 WHERE user_id = $1",
+          [totalPoints, currentDate, user.id],
+        );
+      } catch (err) {
+        console.error(err, "Failed to update medal game");
+      }
+    } else {
+      // Insert the medal game
+      try {
+        await client.query(
+          "INSERT into medal_game(user_id, claimed_prize, year, total_points, created_at, modified_at) VALUES ($1, $2, $3, $4, $5, $6)",
+          [user.id, false, currentYear, totalPoints, currentDate, currentDate],
+        );
+      } catch (err) {
+        console.error(err, "Failed to insert medal game");
+      }
     }
+  } catch (err) {
+    console.error(err, "Failed to get specific medal game");
   }
 
   return {

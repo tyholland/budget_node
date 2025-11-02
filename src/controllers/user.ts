@@ -99,6 +99,8 @@ export const createUser = (req: Request, res: Response) => {
           user,
           category?.rowCount ? category?.rows : [],
           budgetInfo,
+          currentDate,
+          client,
         );
 
         return res.status(206).json({
