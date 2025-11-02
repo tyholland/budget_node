@@ -235,6 +235,7 @@ export const startTrialPlan = (req: Request, res: Response) => {
     try {
       await client.query(update, values);
 
+      // Get user
       try {
         user = await client.query<User>(
           "SELECT * FROM users WHERE auth_id = $1",
@@ -247,6 +248,7 @@ export const startTrialPlan = (req: Request, res: Response) => {
         });
       }
 
+      // Update medal game
       try {
         await client.query<User>(
           "UPDATE meda_game SET claimed_prize = $1, modified_at = $2 WHERE user_id = $3",
