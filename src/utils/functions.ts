@@ -527,6 +527,20 @@ export const getMedalGameData = async (
   // Pro plan
   if (user.subscription_id === 4) {
     totalPoints += 25;
+
+    // Shared account
+    try {
+      sharedAccount = await client.query(
+        "SELECT * FROM connected_accounts WHERE main_account = $1 OR allowed_account = $2 AND is_connected = $3",
+        [user.id, user.id, true],
+      );
+    } catch (err) {
+      console.error(err, "Failed to get budget date");
+    }
+
+    if (sharedAccount?.rowCount && sharedAccount.rowCount > 0) {
+      totalPoints += 15;
+    }
   }
 
   // Starter plan
@@ -534,89 +548,77 @@ export const getMedalGameData = async (
     totalPoints += 20;
   }
 
-  // Shared account
-  try {
-    sharedAccount = await client.query(
-      "SELECT * FROM connected_accounts WHERE main_account = $1 OR allowed_account = $2 AND is_connected = $3",
-      [user.id, user.id, true],
-    );
-  } catch (err) {
-    console.error(err, "Failed to get budget date");
-  }
-
-  if (sharedAccount?.rowCount && sharedAccount.rowCount > 0) {
-    totalPoints += 15;
-  }
-
   // Budget, Category, and Edits in a month
   if (budgetInfo?.rowCount && budgetInfo.rowCount > 0) {
     // Has budget
     totalPoints += 14;
 
-    // Has expenses under Non-Discretionary, Savings, and/or Fun Money
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    category.forEach((result: any) => {
-      if (result.label === "Non-Discretionary") {
-        const hasCategory = budgetInfo.rows.some(
-          (item: Budget) =>
-            item.user_id === user.id &&
-            item.category_id === result.id &&
-            dayjs(item.modified_at).year() === currentYear,
-        );
+    if (user.subscription_id === 4) {
+      // Has expenses under Non-Discretionary, Savings, and/or Fun Money
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      category.forEach((result: any) => {
+        if (result.label === "Non-Discretionary") {
+          const hasCategory = budgetInfo.rows.some(
+            (item: Budget) =>
+              item.user_id === user.id &&
+              item.category_id === result.id &&
+              dayjs(item.modified_at).year() === currentYear,
+          );
 
-        if (hasCategory) {
-          totalPoints += 4;
-          expenses_in_category_1 = true;
+          if (hasCategory) {
+            totalPoints += 4;
+            expenses_in_category_1 = true;
+          }
         }
-      }
 
-      if (result.label === "Savings") {
-        const hasCategory = budgetInfo.rows.some(
-          (item: Budget) =>
-            item.user_id === user.id &&
-            item.category_id === result.id &&
-            dayjs(item.modified_at).year() === currentYear,
-        );
+        if (result.label === "Savings") {
+          const hasCategory = budgetInfo.rows.some(
+            (item: Budget) =>
+              item.user_id === user.id &&
+              item.category_id === result.id &&
+              dayjs(item.modified_at).year() === currentYear,
+          );
 
-        if (hasCategory) {
-          totalPoints += 4;
-          expenses_in_category_2 = true;
+          if (hasCategory) {
+            totalPoints += 4;
+            expenses_in_category_2 = true;
+          }
         }
-      }
 
-      if (result.label === "Fun Money") {
-        const hasCategory = budgetInfo.rows.some(
-          (item: Budget) =>
-            item.user_id === user.id &&
-            item.category_id === result.id &&
-            dayjs(item.modified_at).year() === currentYear,
-        );
+        if (result.label === "Fun Money") {
+          const hasCategory = budgetInfo.rows.some(
+            (item: Budget) =>
+              item.user_id === user.id &&
+              item.category_id === result.id &&
+              dayjs(item.modified_at).year() === currentYear,
+          );
 
-        if (hasCategory) {
-          totalPoints += 4;
-          expenses_in_category_3 = true;
+          if (hasCategory) {
+            totalPoints += 4;
+            expenses_in_category_3 = true;
+          }
         }
-      }
 
-      // Category that isn't one of the 3 default categories
-      if (
-        result.label !== "Fun Money" &&
-        result.label !== "Savings" &&
-        result.label !== "Non-Discretionary"
-      ) {
-        const hasCategory = budgetInfo.rows.some(
-          (item: Budget) =>
-            item.user_id === user.id &&
-            item.category_id === result.id &&
-            dayjs(item.modified_at).year() === currentYear,
-        );
+        // Category that isn't one of the 3 default categories
+        if (
+          result.label !== "Fun Money" &&
+          result.label !== "Savings" &&
+          result.label !== "Non-Discretionary"
+        ) {
+          const hasCategory = budgetInfo.rows.some(
+            (item: Budget) =>
+              item.user_id === user.id &&
+              item.category_id === result.id &&
+              dayjs(item.modified_at).year() === currentYear,
+          );
 
-        if (hasCategory) {
-          totalPoints += 3;
-          add_category_in_month = true;
+          if (hasCategory) {
+            totalPoints += 3;
+            add_category_in_month = true;
+          }
         }
-      }
-    });
+      });
+    }
 
     // Get Budget Date info
     try {
@@ -674,6 +676,7 @@ export const getMedalGameData = async (
   }
 
   let medalGame;
+  let updatedMedalGame;
 
   try {
     // Check for medal game for the user
@@ -695,8 +698,8 @@ export const getMedalGameData = async (
     } else {
       // Insert the medal game
       try {
-        await client.query(
-          "INSERT into medal_game(user_id, claimed_prize, year, total_points, created_at, modified_at) VALUES ($1, $2, $3, $4, $5, $6)",
+        updatedMedalGame = await client.query(
+          "INSERT into medal_game(user_id, claimed_prize, year, total_points, created_at, modified_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING claimed_prize,",
           [user.id, false, currentYear, totalPoints, currentDate, currentDate],
         );
       } catch (err) {
@@ -708,7 +711,15 @@ export const getMedalGameData = async (
   }
 
   return {
-    total_medal_points: totalPoints,
+    total_medal_points:
+      medalGame?.rowCount && medalGame.rowCount > 0
+        ? medalGame.rows[0].total_points
+        : totalPoints,
+    is_claimed: updatedMedalGame?.rowCount
+      ? updatedMedalGame.rows[0].claimed_prize
+      : medalGame?.rowCount
+        ? medalGame.rows[0].claimed_prize
+        : false,
     shared_account: false,
     expenses_in_category_1,
     expenses_in_category_2,
