@@ -520,12 +520,13 @@ export const getMedalGameData = async (
   let edit_expense_in_month = false;
   let edit_income_in_month = false;
   let add_category_in_month = false;
+  let shared_account = false;
   const currentYear = dayjs().year();
   let budgetDate;
   let sharedAccount;
 
   // Pro plan
-  if (user.subscription_id === 4) {
+  if (user.subscription_id === 4 || user.subscription_id === 9) {
     totalPoints += 25;
 
     // Shared account
@@ -540,6 +541,7 @@ export const getMedalGameData = async (
 
     if (sharedAccount?.rowCount && sharedAccount.rowCount > 0) {
       totalPoints += 15;
+      shared_account = true;
     }
   }
 
@@ -553,7 +555,7 @@ export const getMedalGameData = async (
     // Has budget
     totalPoints += 14;
 
-    if (user.subscription_id === 4) {
+    if (user.subscription_id === 4 || user.subscription_id === 9) {
       // Has expenses under Non-Discretionary, Savings, and/or Fun Money
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       category.forEach((result: any) => {
@@ -686,14 +688,16 @@ export const getMedalGameData = async (
     );
 
     if (medalGame.rowCount) {
-      // Update the medal game
-      try {
-        await client.query(
-          "UPDATE medal_game SET total_points = $1, modified_at = $2 WHERE user_id = $1",
-          [totalPoints, currentDate, user.id],
-        );
-      } catch (err) {
-        console.error(err, "Failed to update medal game");
+      if (!medalGame.rows[0].claimed_prize) {
+        // Update the medal game
+        try {
+          await client.query(
+            "UPDATE medal_game SET total_points = $1, modified_at = $2 WHERE user_id = $1",
+            [totalPoints, currentDate, user.id],
+          );
+        } catch (err) {
+          console.error(err, "Failed to update medal game");
+        }
       }
     } else {
       // Insert the medal game
@@ -712,7 +716,7 @@ export const getMedalGameData = async (
 
   return {
     total_medal_points:
-      medalGame?.rowCount && medalGame.rowCount > 0
+      medalGame?.rowCount && medalGame.rows[0].claimed_prize
         ? medalGame.rows[0].total_points
         : totalPoints,
     is_claimed: updatedMedalGame?.rowCount
@@ -720,7 +724,7 @@ export const getMedalGameData = async (
       : medalGame?.rowCount
         ? medalGame.rows[0].claimed_prize
         : false,
-    shared_account: false,
+    shared_account,
     expenses_in_category_1,
     expenses_in_category_2,
     expenses_in_category_3,
