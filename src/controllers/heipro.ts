@@ -56,7 +56,7 @@ const detectTechStack = (html: string) => {
   if (html.includes("wix")) return "Wix";
   if (html.includes("squarespace")) return "Squarespace";
 
-  return "Unknown";
+  return "N/A";
 };
 
 const detectSEO = (lowerHTML: string, score: number) => {
