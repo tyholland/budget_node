@@ -375,7 +375,7 @@ export const heiproEndpoint = (req: Request, res: Response) => {
             name: details.name,
             website: details.website,
             phone: details.formatted_phone_number || "N/A",
-            email: email || "Not found",
+            email: email || "N/A",
             score: analysis.score,
             issues: analysis.issues,
             services: analysis.services,
