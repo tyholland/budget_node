@@ -3,6 +3,7 @@ import {
   heiproDetailsEndpoint,
   heiproEndpoint,
   heiproMultiDetailsEndpoint,
+  heiproSendEmail,
 } from "../controllers/heipro";
 
 export const publicRoutes = (app: Express) => {
@@ -14,4 +15,7 @@ export const publicRoutes = (app: Express) => {
 
   // Multiple Clients Details
   app.post("/heipro/multi", heiproMultiDetailsEndpoint);
+
+  // Multiple Clients Details
+  app.post("/heipro/send-email", heiproSendEmail);
 };

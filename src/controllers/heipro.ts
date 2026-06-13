@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import axios from "axios";
+import { sendEmail } from "../utils/gmail";
 
 const API_KEY = "AIzaSyDgEtuwmqp4BnpciS5oJH1xnNJHCnv095w";
 
@@ -521,5 +522,26 @@ export const heiproMultiDetailsEndpoint = (req: Request, res: Response) => {
     ];
 
     res.status(200).json(uniqueResults);
+  })();
+};
+
+export const heiproSendEmail = (req: Request, res: Response) => {
+  (async () => {
+    try {
+      const { to, subject, body } = req.body;
+
+      await sendEmail(to, subject, body);
+
+      res.json({
+        success: true,
+        message: "Email sent",
+      });
+    } catch (err) {
+      console.error(err);
+
+      res.status(500).json({
+        success: false,
+      });
+    }
   })();
 };
